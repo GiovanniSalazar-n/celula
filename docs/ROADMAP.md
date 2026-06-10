@@ -11,6 +11,9 @@
 
 ## Fase 2: Motor basico
 
+Estado: iniciada. Ya existen tests verdes para creacion de tablero, equipos, cuadrantes, posicion inicial del jugador, ubicacion de enemigos, direcciones, movimiento fuera del tablero, movimiento a celda vacia y rastros basicos.
+
+
 - Crear tipos principales.
 - Implementar tablero configurable.
 - Implementar equipos y cuadrantes.
@@ -54,3 +57,4 @@
 - Probar flujo completo.
 - Actualizar README.
 - Asegurar que todos los tests pasen.
+

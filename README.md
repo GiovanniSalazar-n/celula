@@ -4,12 +4,13 @@ Juego/simulacion de celulas en una matriz. El proyecto se construira por fases, 
 
 ## Estado actual
 
-Fase 1 iniciada:
+Fase 1 completada y Fase 2 iniciada:
 
 - Dockerfile revisado y ajustado para desarrollo.
 - Estructura base creada.
 - Documentacion inicial creada en `docs/`.
 - Primeros tests del motor preparados para guiar Fase 2.
+- Motor inicial implementado: tablero, equipos, cuadrantes, posiciones iniciales, direcciones y rastros basicos.
 
 Los tests iniciales son intencionalmente una especificacion ejecutable: pueden fallar hasta que se implemente el motor en Fase 2.
 
@@ -90,3 +91,5 @@ Puerto previsto: `5173`.
 Incluye una simulacion local de una sola partida activa, cuatro equipos, tablero configurable, API REST, frontend React y puntuaciones en JSON.
 
 No incluye multijugador, autenticacion, base de datos real, niveles, energia, vida, control manual de movimiento ni control de velocidad.
+
+

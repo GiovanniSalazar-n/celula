@@ -4,3 +4,5 @@
 .ssh/
 node_modules/
 peticion.txt
+dist/
+backend/dist/
