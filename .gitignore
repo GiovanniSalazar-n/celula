@@ -1,0 +1,5 @@
+.env
+*.env
+.hermes/
+.ssh/
+node_modules/
