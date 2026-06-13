@@ -1,8 +1,6 @@
-.env
-*.env
-.hermes/
-.ssh/
 node_modules/
-peticion.txt
 dist/
-backend/dist/
+coverage/
+*.log
+frontend/node_modules/
+backend/node_modules/

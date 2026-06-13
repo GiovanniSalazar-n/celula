@@ -1,44 +1,134 @@
-﻿# Plan de pruebas
+# Battle of Cells Test Plan
 
-## Estrategia
+## Strategy
 
-El desarrollo seguira TDD. Primero se escriben pruebas del motor del juego, despues se implementa la logica necesaria para pasarlas. La API y el frontend se prueban cuando existan sus capas correspondientes.
+The project follows documentation-first development and TDD.
 
-## Motor del juego
+Order of work:
 
-Herramienta: Vitest.
+1. lock rules in docs,
+2. encode rules in tests,
+3. implement the engine and API,
+4. connect the frontend,
+5. run regression tests.
 
-Pruebas iniciales de Fase 2:
+## Backend Unit Tests
 
-- Crear tablero 10x10.
-- Permitir tablero configurable.
-- Crear 4 equipos con una celula principal cada uno.
-- Validar que el jugador solo inicia dentro de su cuadrante.
-- Validar que enemigos aparecen dentro de sus cuadrantes.
+### Board
 
-Pruebas posteriores:
+* creates a 100 x 200 board,
+* rejects outside positions,
+* prevents more than one cell per square,
+* creates one initial cell per player,
+* random placement avoids occupied squares.
 
-- Direcciones validas.
-- Movimiento fuera del tablero.
-- Rastros al moverse.
-- Bloqueo por rastro propio.
-- Comer rastro enemigo.
-- Combate por misma celda, entrada a celula enemiga e intercambio.
-- Rotacion de preferencia por tick.
-- Estados, victoria, derrota y scoring.
+### Directions
 
-## Backend
+* supports `n`, `s`, `e`, `w`, `ne`, `nw`, `se`, `sw`,
+* calculates adjacent coordinates,
+* marks outside neighbors correctly.
 
-Herramientas: Vitest + Supertest.
+### Actions
 
-Se probaran endpoints de creacion, inicio, tick, estado, pausa, resume, reset y puntuaciones.
+Movement:
 
-## Frontend
+* valid move to empty square succeeds,
+* move outside board is canceled,
+* move to allied cell is canceled,
+* move to enemy cell is canceled,
+* movement does not damage enemies.
 
-Herramientas: Vitest + React Testing Library.
+Eat:
 
-Se probaran render del tablero, seleccion valida, bloqueo de seleccion invalida, visualizacion de celulas/rastros/estado y llamadas de botones a la API.
+* attack deals 5 damage,
+* attack to empty square fails,
+* attack outside board fails,
+* attack to allied cell fails,
+* lethal attack removes the enemy immediately.
 
-## Criterio por fase
+Reproduction:
 
-Una fase se considera lista cuando sus pruebas relevantes pasan y la documentacion queda actualizada con cualquier decision nueva.
+* requires health >= 50,
+* requires age < 55,
+* requires empty in-bounds destination,
+* preserves total health,
+* parent keeps extra point on odd values,
+* newborn starts at age 1,
+* newborn does not act in the same turn.
+
+Rest:
+
+* heals 3,
+* caps at 100,
+* consumes the action.
+
+### Ordering
+
+* younger cells act first,
+* then earlier creation turn,
+* then lower row,
+* then lower column,
+* order uses the start-of-turn snapshot,
+* dead cells are skipped.
+
+### Age and Turn Flow
+
+* age increases by 1 for surviving cells,
+* age does not damage cells,
+* age does not kill cells,
+* obsolete 70-damage and 90-death rules do not exist,
+* turn starts at 1,
+* board updates immediately after each action,
+* result is evaluated after the full turn.
+
+### Validation
+
+* accepts valid literal action codes,
+* rejects invalid return values,
+* rejects loops,
+* rejects imports,
+* rejects `eval` and `exec`,
+* rejects unsafe lookups,
+* enforces the documented function header,
+* accepts the translated legacy helper environment keys,
+* runtime strategy failure only cancels the acting cell.
+
+## Backend API Tests
+
+* validate player function,
+* reject invalid player function,
+* reject invalid match start,
+* start match after valid configuration,
+* lock match after start,
+* pause does not unlock editing,
+* tick advances simulation,
+* end scores the current board immediately,
+* state returns current board and stats,
+* reset clears the active match.
+
+## Frontend Tests
+
+* configuration screen renders both players,
+* player name and color are editable,
+* code can be entered,
+* validation errors are shown,
+* imported strategy template is available,
+* start is disabled until both players are valid,
+* simulation screen shows board, turn, stats, and errors,
+* simulation screen can end a match early,
+* editing is blocked after start,
+* selected cell details are shown,
+* final screen shows winner or draw and statistics.
+
+## Manual Verification
+
+Before sign-off:
+
+1. run backend tests,
+2. run frontend tests,
+3. start backend and frontend locally,
+4. validate both sample strategies,
+5. start a match,
+6. play, pause, single-step, and end a match early,
+7. confirm final result screen,
+8. return to configuration and start again.

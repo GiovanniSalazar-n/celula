@@ -1,81 +1,184 @@
-﻿# API
+# Battle of Cells API
 
-Base URL esperada: `http://localhost:3000/api`.
+Base URL: `http://localhost:3000/api`
 
-## POST /game/new
+## Health
 
-Crea una nueva simulacion.
+### `GET /health`
+
+Response:
+
+```json
+{
+  "ok": true
+}
+```
+
+## Validation
+
+### `POST /validation/player-function`
+
+Validates one Python-like strategy.
 
 Request:
 
 ```json
 {
-  "boardSize": { "width": 10, "height": 10 }
+  "code": "def action(cell, environment):\n    return \"d\""
 }
 ```
 
-Response esperado:
+Response:
 
 ```json
 {
-  "game": {
-    "status": "setup",
-    "tick": 0
+  "isValid": true,
+  "errors": [],
+  "normalizedCode": "def action(cell, environment):\n    return \"d\""
+}
+```
+
+Invalid response example:
+
+```json
+{
+  "isValid": false,
+  "errors": [
+    "Only the MVP subset is allowed. Loops, imports, and dangerous features are blocked."
+  ]
+}
+```
+
+## Game
+
+### `GET /game/state`
+
+Returns the current match state if one exists.
+
+Response example:
+
+```json
+{
+  "match": {
+    "status": "paused",
+    "locked": true,
+    "currentTurn": 1,
+    "config": {
+      "turnLimit": 5000,
+      "boardRows": 100,
+      "boardCols": 200,
+      "teams": []
+    },
+    "cells": [],
+    "logs": [],
+    "result": null
   }
 }
 ```
 
-## POST /game/start
+If no active match exists:
 
-Inicia la simulacion con la posicion elegida por el jugador.
+```json
+{
+  "match": null
+}
+```
+
+### `POST /game/start`
+
+Creates a new active match, validates both players again, locks configuration, places the initial cells, and returns the paused initial state.
 
 Request:
 
 ```json
 {
-  "playerStart": { "x": 2, "y": 3 }
+  "players": [
+    {
+      "name": "Alpha",
+      "color": "#22d3ee",
+      "code": "def action(cell, environment):\n    return \"d\""
+    },
+    {
+      "name": "Beta",
+      "color": "#f43f5e",
+      "code": "def action(cell, environment):\n    return \"d\""
+    }
+  ],
+  "turnLimit": 5000
 }
 ```
 
-Debe rechazar posiciones fuera del cuadrante del equipo 1.
-
-## POST /game/tick
-
-Avanza un tick si la simulacion esta en `running` o si el jugador esta mirando como espectador despues de perder.
-
-## GET /game
-
-Devuelve el estado actual de la simulacion.
-
-## POST /game/pause
-
-Cambia el estado a `paused` si la simulacion esta corriendo.
-
-## POST /game/resume
-
-Regresa a `running` desde `paused`.
-
-## POST /game/reset
-
-Reinicia la simulacion a `setup`.
-
-## POST /scores
-
-Guarda una puntuacion.
-
-Request:
+Validation failure response:
 
 ```json
 {
-  "playerName": "Jugador",
-  "score": 245,
-  "ticksSurvived": 95,
-  "trailsEaten": 5,
-  "mainCellsKilled": 1,
-  "result": "win"
+  "error": "Invalid match configuration.",
+  "details": [
+    "Player 2 strategy is invalid."
+  ]
 }
 ```
 
-## GET /scores
+### `POST /game/play`
 
-Devuelve la lista de puntuaciones guardadas.
+Marks the active match as `running`.
+
+Response:
+
+```json
+{
+  "match": {}
+}
+```
+
+### `POST /game/pause`
+
+Marks the active match as `paused`. The match remains locked.
+
+### `POST /game/tick`
+
+Advances the simulation by exactly one turn if the match is active and not finished. This endpoint is used for both manual step and automatic playback.
+
+### `POST /game/end`
+
+Ends the active match immediately and scores the current board using the same tiebreakers as the turn-limit result.
+
+Response:
+
+```json
+{
+  "match": {
+    "status": "finished",
+    "result": {
+      "winner": 1,
+      "reason": "manual_stop",
+      "finalTurn": 42,
+      "teamSummaries": []
+    }
+  }
+}
+```
+
+### `POST /game/reset`
+
+Clears the active match and returns to configuration state.
+
+Response:
+
+```json
+{
+  "match": null
+}
+```
+
+## Status Semantics
+
+* `paused`: active match exists, board visible, waiting for user input.
+* `running`: frontend may continue calling `tick`.
+* `finished`: result is final, no more turns advance.
+
+## Error Handling
+
+* `400`: invalid request payload or invalid game configuration.
+* `404`: action requires an active match but none exists.
+* `409`: action conflicts with current state, such as trying to play a finished match.

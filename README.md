@@ -1,95 +1,71 @@
-﻿# Cell Matrix Simulation
+# Battle of Cells
 
-Juego/simulacion de celulas en una matriz. El proyecto se construira por fases, con documentacion y pruebas antes de implementar la interfaz completa.
+Battle of Cells is a local two-player simulation where each player programs a safe Python-like strategy to control a colony of cells.
 
-## Estado actual
+## Stack
 
-Fase 1 completada y Fase 2 iniciada:
+* Frontend: React + Vite + TypeScript
+* Backend: Node.js + Express + TypeScript
+* Tests: Vitest, React Testing Library, Supertest
 
-- Dockerfile revisado y ajustado para desarrollo.
-- Estructura base creada.
-- Documentacion inicial creada en `docs/`.
-- Primeros tests del motor preparados para guiar Fase 2.
-- Motor inicial implementado: tablero, equipos, cuadrantes, posiciones iniciales, direcciones y rastros basicos.
-
-Los tests iniciales son intencionalmente una especificacion ejecutable: pueden fallar hasta que se implemente el motor en Fase 2.
-
-## Docker
-
-Construir el entorno:
+## Install
 
 ```bash
-docker compose build
-```
-
-Abrir una shell dentro del contenedor:
-
-```bash
-docker compose run --rm --service-ports dev
-```
-
-El contenedor incluye Node.js 22, npm, Corepack, git, openssh-client, curl y Hermes Agent.
-
-## Instalar dependencias
-
-Dentro del contenedor:
-
-```bash
-cd backend
-npm install
-
-cd ../frontend
 npm install
 ```
 
-## Backend
+## Run
 
-Ejecutar tests del backend:
+Backend:
 
 ```bash
-cd backend
-npm test
+npm run dev:backend
 ```
 
-Ejecutar backend en desarrollo, cuando exista el servidor funcional:
+Frontend:
 
 ```bash
-cd backend
+npm run dev:frontend
+```
+
+Or run both together:
+
+```bash
 npm run dev
 ```
 
-Puerto previsto: `3000`.
+Frontend URL: [http://localhost:5173](http://localhost:5173)  
+Backend URL: [http://localhost:3000](http://localhost:3000)
 
-## Frontend
+## Tests
 
-Ejecutar tests del frontend:
+All tests:
 
 ```bash
-cd frontend
 npm test
 ```
 
-Ejecutar frontend en desarrollo:
+Backend only:
 
 ```bash
-cd frontend
-npm run dev -- --host 0.0.0.0
+npm run test:backend
 ```
 
-Puerto previsto: `5173`.
+Frontend only:
 
-## Documentacion
+```bash
+npm run test:frontend
+```
 
-- `docs/SPEC.md`: reglas completas del juego.
-- `docs/ARCHITECTURE.md`: separacion entre motor, API, frontend y almacenamiento.
-- `docs/API.md`: endpoints esperados.
-- `docs/TEST_PLAN.md`: estrategia de pruebas.
-- `docs/ROADMAP.md`: fases de desarrollo.
+## Docker
 
-## Alcance de la primera version
+The dev container setup is intentionally kept simple and unchanged in behavior:
 
-Incluye una simulacion local de una sola partida activa, cuatro equipos, tablero configurable, API REST, frontend React y puntuaciones en JSON.
+```bash
+docker compose up -d
+docker compose exec dev bash
+```
 
-No incluye multijugador, autenticacion, base de datos real, niveles, energia, vida, control manual de movimiento ni control de velocidad.
+## Documentation
 
-
+See the [docs](</C:/Users/IGNITER/Desktop/proyectos/ProyectoCelulas/docs>) directory for the specification, architecture, API, test plan, roadmap, flow, and decisions.

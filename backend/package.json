@@ -1,5 +1,5 @@
-﻿{
-  "name": "cell-matrix-backend",
+{
+  "name": "battle-of-cells-backend",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -10,16 +10,17 @@
     "test:watch": "vitest"
   },
   "dependencies": {
-    "cors": "latest",
-    "express": "latest"
+    "cors": "^2.8.5",
+    "express": "^4.21.2"
   },
   "devDependencies": {
-    "@types/cors": "latest",
-    "@types/express": "latest",
-    "@types/node": "latest",
-    "supertest": "latest",
-    "tsx": "latest",
-    "typescript": "latest",
-    "vitest": "latest"
+    "@types/cors": "^2.8.17",
+    "@types/express": "^5.0.3",
+    "@types/node": "^24.0.10",
+    "@types/supertest": "^6.0.3",
+    "supertest": "^7.1.1",
+    "tsx": "^4.19.4",
+    "typescript": "^5.8.3",
+    "vitest": "^3.2.4"
   }
 }

@@ -1,60 +1,52 @@
-﻿# Roadmap
+# Battle of Cells Roadmap
 
-## Fase 1: Base del proyecto
+## Phase 0: Context Recovery
 
-- Revisar Dockerfile.
-- Agregar docker-compose si aporta al flujo local.
-- Crear estructura base.
-- Crear documentacion inicial.
-- Crear README inicial.
-- Preparar los primeros tests del motor.
+* inspect the surviving frontend,
+* identify missing docs and scaffolding,
+* confirm obsolete gameplay is removed from the plan.
 
-## Fase 2: Motor basico
+## Phase 1: Documentation Repair
 
-Estado: iniciada. Ya existen tests verdes para creacion de tablero, equipos, cuadrantes, posicion inicial del jugador, ubicacion de enemigos, direcciones, movimiento fuera del tablero, movimiento a celda vacia y rastros basicos.
+* rewrite the specification,
+* align architecture and API docs,
+* document all removed rules,
+* establish the docs as the source of truth.
 
+## Phase 2: Tests First
 
-- Crear tipos principales.
-- Implementar tablero configurable.
-- Implementar equipos y cuadrantes.
-- Validar posicion inicial del jugador.
-- Colocar enemigos en sus cuadrantes.
-- Implementar movimiento basico y rastros.
+* create backend unit tests for rules,
+* create backend API tests,
+* create frontend workflow tests,
+* let tests define the implementation target.
 
-## Fase 3: Combate
+## Phase 3: Engine Rebuild
 
-- Comer rastro enemigo.
-- Bloquear rastro propio.
-- Resolver conflictos por misma celda.
-- Resolver entrada a celula enemiga.
-- Resolver intercambio de posiciones.
-- Implementar preferencia ciclica por tick.
+* implement board, ordering, actions, scoring, and turn flow from scratch,
+* remove age-damage and old-age death,
+* keep rules independent from React.
 
-## Fase 4: Estados y puntuacion
+## Phase 4: Safe Strategy Validation
 
-- Implementar `setup`, `running`, `paused`, `player_lost` y `finished`.
-- Implementar victoria y derrota.
-- Calcular score.
-- Guardar puntuaciones en JSON.
+* implement the restricted Python-like parser and interpreter,
+* reject unsafe syntax and invalid action returns,
+* support runtime error logging without aborting the match.
 
-## Fase 5: API REST
+## Phase 5: Backend Integration
 
-- Crear Express server.
-- Crear rutas de juego y puntuaciones.
-- Crear tests con Supertest.
-- Conectar rutas con el motor.
+* expose validation and match-control routes,
+* keep one active match in memory,
+* return serializable state to the frontend.
 
-## Fase 6: Frontend
+## Phase 6: Frontend Alignment
 
-- Crear app React + Vite.
-- Mostrar tablero, celulas principales y rastros.
-- Permitir seleccion inicial del jugador.
-- Agregar controles basicos.
+* preserve the existing UI components where possible,
+* replace local-engine coupling with backend API calls,
+* keep configuration, simulation, and final-result flow intact.
 
-## Fase 7: Integracion
+## Phase 7: End-to-End Verification
 
-- Conectar frontend con backend.
-- Probar flujo completo.
-- Actualizar README.
-- Asegurar que todos los tests pasen.
-
+* run automated tests,
+* verify the app locally,
+* document exact commands,
+* leave the repository in a reproducible state.

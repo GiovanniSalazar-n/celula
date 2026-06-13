@@ -1,43 +1,196 @@
-﻿export type TeamId = 1 | 2 | 3 | 4;
+import type { DIRECTION_DELTAS } from './directions.js';
 
-export type GameStatus = "setup" | "running" | "paused" | "player_lost" | "finished";
+export type TeamId = 1 | 2;
+export type Direction = keyof typeof DIRECTION_DELTAS;
+export type ActionCode = 'd' | `m${Direction}` | `a${Direction}` | `r${Direction}`;
+export type NeighborState = 'empty' | 'allied' | 'enemy' | 'outside';
+export type MatchStatus = 'paused' | 'running' | 'finished';
+export type CellActionStatus = 'success' | 'failed' | 'invalid' | 'error' | 'none';
+export type LogType = 'system' | 'error' | 'result';
 
-export interface Position {
-  x: number;
-  y: number;
+export interface BoardPosition {
+  row: number;
+  col: number;
 }
 
-export interface BoardSize {
-  width: number;
-  height: number;
+export interface PlayerSubmission {
+  name: string;
+  color: string;
+  code: string;
 }
 
-export interface MainCell {
-  teamId: TeamId;
-  position: Position;
-  alive: boolean;
+export interface ValidationResult {
+  isValid: boolean;
+  errors: string[];
+  normalizedCode?: string;
+  program?: StrategyProgram;
 }
 
-export interface TrailCell {
-  teamId: TeamId;
-  position: Position;
-}
-
-export interface TeamState {
+export interface PlayerDefinition {
   id: TeamId;
-  mainCell: MainCell;
-  trails: TrailCell[];
+  name: string;
+  color: string;
+  code: string;
+  validation: ValidationResult;
 }
 
-export interface GameState {
-  boardSize: BoardSize;
-  status: GameStatus;
-  tick: number;
-  teams: TeamState[];
-  winnerTeamId?: TeamId;
+export interface Cell {
+  id: string;
+  teamId: TeamId;
+  teamName: string;
+  teamColor: string;
+  position: BoardPosition;
+  health: number;
+  age: number;
+  alive: boolean;
+  creationTurn: number;
+  createdDuringCurrentTurn: boolean;
+  lastAction: string;
+  lastActionStatus: CellActionStatus;
 }
 
-export interface CreateGameOptions {
-  boardSize?: BoardSize;
-  playerStart?: Position;
+export interface BoardState {
+  rows: number;
+  cols: number;
+  occupancy: Map<string, string>;
+}
+
+export interface TeamSummary {
+  id: TeamId;
+  name: string;
+  color: string;
+  livingCells: number;
+  totalHealth: number;
+  averageVitality: number;
+}
+
+export interface GameResult {
+  winner: TeamId | 'draw';
+  reason: 'elimination' | 'double_elimination' | 'turn_limit' | 'manual_stop';
+  finalTurn: number;
+  teamSummaries: [TeamSummary, TeamSummary];
+}
+
+export interface MatchConfig {
+  teams: [PlayerDefinition, PlayerDefinition];
+  turnLimit: number;
+  boardRows: number;
+  boardCols: number;
+}
+
+export interface TurnLog {
+  turn: number;
+  type: LogType;
+  message: string;
+  teamId?: TeamId;
+  cellId?: string;
+}
+
+export interface SimulationState {
+  status: MatchStatus;
+  locked: boolean;
+  config: MatchConfig;
+  board: BoardState;
+  cells: Cell[];
+  currentTurn: number;
+  logs: TurnLog[];
+  result: GameResult | null;
+  nextCellId: number;
+}
+
+export interface SerializedSimulationState {
+  status: MatchStatus;
+  locked: boolean;
+  config: MatchConfig;
+  cells: Cell[];
+  currentTurn: number;
+  logs: TurnLog[];
+  result: GameResult | null;
+}
+
+export interface StrategyProgram {
+  body: Statement[];
+}
+
+export type Statement = ReturnStatement | IfStatement;
+
+export interface ReturnStatement {
+  type: 'return';
+  value: ActionCode;
+}
+
+export interface IfStatement {
+  type: 'if';
+  condition: Expression;
+  consequent: Statement[];
+  alternate?: Statement[];
+}
+
+export type Expression = LiteralExpression | LookupExpression | UnaryExpression | BinaryExpression;
+
+export interface LiteralExpression {
+  type: 'literal';
+  value: string | number | boolean;
+}
+
+export interface LookupExpression {
+  type: 'lookup';
+  source: 'cell' | 'environment';
+  key: string;
+}
+
+export interface UnaryExpression {
+  type: 'unary';
+  operator: 'not';
+  expression: Expression;
+}
+
+export interface BinaryExpression {
+  type: 'binary';
+  operator: 'and' | 'or' | '==' | '!=' | '<' | '<=' | '>' | '>=';
+  left: Expression;
+  right: Expression;
+}
+
+export interface StrategyCellContext {
+  health: number;
+  age: number;
+  row: number;
+  col: number;
+}
+
+export interface StrategyEnvironmentContext {
+  n: NeighborState;
+  s: NeighborState;
+  e: NeighborState;
+  w: NeighborState;
+  ne: NeighborState;
+  nw: NeighborState;
+  se: NeighborState;
+  sw: NeighborState;
+  team_health: number;
+  turn: number;
+  rows: number;
+  cols: number;
+  has_adjacent_ally: boolean;
+  has_adjacent_enemy: boolean;
+  enemy_count: number;
+  occupied_count: number;
+  empty_count: number;
+  first_enemy_direction: Direction | 'none';
+  north_occupied_count: number;
+  south_occupied_count: number;
+  east_occupied_count: number;
+  west_occupied_count: number;
+}
+
+export type ParsedAction =
+  | { kind: 'rest'; code: 'd' }
+  | { kind: 'move'; direction: Direction; code: ActionCode }
+  | { kind: 'eat'; direction: Direction; code: ActionCode }
+  | { kind: 'reproduce'; direction: Direction; code: ActionCode };
+
+export interface MatchStartInput {
+  players: [PlayerSubmission, PlayerSubmission];
+  turnLimit?: number;
 }

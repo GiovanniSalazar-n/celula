@@ -1,0 +1,864 @@
+You are helping me continue an existing project called “Battle of Cells”.
+
+Important context:
+
+I already have a first working version with a relatively solid frontend, but the code has some errors and the project lost part of the documentation/context during previous iterations. I want you to realign the project with the new business requirements, the flow diagram, SDD documentation, and TDD tests.
+
+Do not continue using the previous game concept about “main cells leaving trails”. That requirement is obsolete.
+
+The current project must now follow the “Battle of Cells” business requirements:
+
+* Local web app.
+* Local turn-based simulation.
+* Two local players.
+* Each player represents a team/species.
+* Each player writes a Python-like function that controls the behavior of that player’s cells.
+* Each living cell executes one action per turn according to its player’s function.
+* The valid actions are:
+
+  * move
+  * eat
+  * reproduce
+  * rest
+* The first version must be simple, local, testable, and documented.
+* No online multiplayer.
+* No authentication.
+* No database in the first version.
+* No advanced gameplay outside the documented rules.
+
+Main workflow:
+
+1. Show configuration screen.
+2. Player 1 enters name and color.
+3. Player 1 writes function.
+4. Player 1 validates function.
+5. If invalid, show error and allow correction.
+6. If valid, confirm Player 1.
+7. Player 2 enters name and color.
+8. Player 2 writes function.
+9. Player 2 validates function.
+10. If invalid, show error and allow correction.
+11. If valid, confirm Player 2.
+12. When both players are confirmed, allow starting the simulation.
+13. Validate both player functions again before starting.
+14. Create a 100x200 board.
+15. Create one random initial cell for each player.
+16. Initialize turn = 1.
+17. Show board, current turn, and statistics.
+18. User presses Play.
+19. Start the turn cycle.
+20. Execute turns until:
+
+    * one team remains alive,
+    * both teams die,
+    * or the turn limit is reached.
+21. Show final result screen.
+
+Docker context:
+
+The project currently uses this Dockerfile:
+
+```Dockerfile
+FROM node:22
+
+RUN apt-get update && \
+    apt-get install -y \
+    openssh-client \
+    curl \
+    git && \
+    rm -rf /var/lib/apt/lists/*
+
+RUN corepack enable
+
+RUN curl -fsSL https://hermes-agent.nousresearch.com/install.sh | bash
+
+WORKDIR /workspace
+
+CMD ["/bin/bash"]
+```
+
+And this docker-compose.yml:
+
+```yaml
+services:
+  dev:
+    build: .
+    working_dir: /workspace
+    volumes:
+      - .:/workspace
+    ports:
+      - "5173:5173"
+      - "3000:3000"
+    tty: true
+    stdin_open: true
+```
+
+Keep the Docker setup unless there is a clear reason to improve it. If you recommend changes, explain why before changing them.
+
+Technology stack:
+
+* TypeScript.
+* Frontend: React + Vite.
+* Backend: Node.js + Express.
+* Tests: Vitest for logic and frontend tests, Supertest for backend API tests.
+* Documentation-first development.
+* Test-driven development.
+* Local JSON or browser local storage may be used for simple local persistence if needed, but no real database in the MVP.
+
+Documentation requirement:
+
+Before changing core behavior, make sure the project has and maintains these files:
+
+```txt
+docs/
+  SPEC.md
+  ARCHITECTURE.md
+  API.md
+  TEST_PLAN.md
+  ROADMAP.md
+  FLOW.md
+  DECISIONS.md
+```
+
+These markdown files are important. Do not let the implementation drift away from them.
+
+If any of these files already exist, review them and update them instead of replacing them blindly.
+
+If they are missing, create them.
+
+The documentation must reflect the current business rules and must explicitly mark obsolete rules as removed.
+
+Important rule change:
+
+Remove the old age-damage and old-age-death rules.
+
+Do not implement this old rule:
+
+* cells lose 5 health from age 70 onward,
+* cells die automatically at age 90.
+
+This must be removed from the implementation, tests, and documentation.
+
+Age must still exist, but only for execution priority and display.
+
+Correct age rule for this version:
+
+* Each cell has an age.
+* Initial cells start at age 1.
+* Newborn cells start at age 1.
+* Age increases by 1 at the end of each turn for cells that survived the turn.
+* Age does not cause health loss.
+* Age does not directly kill cells.
+* Age is used for execution priority:
+
+  * lower age acts first,
+  * then lower creation turn,
+  * then lower row at the start-of-turn snapshot,
+  * then lower column at the start-of-turn snapshot.
+* Do not use visible unique IDs as business rules for priority.
+* Internal IDs may exist only as technical implementation details.
+
+Core board rules:
+
+* The board is fixed at 100 rows x 200 columns.
+* The board does not change size during a match.
+* No obstacles.
+* No resources.
+* No external food.
+* No more than one cell can occupy the same square.
+* Squares outside the board are invalid.
+* Initial placement must avoid occupied squares.
+* The board must be displayed in the simulation screen.
+* The logic must be separated from the UI and must be testable without React.
+
+Cell attributes:
+
+Each cell must have at least:
+
+* team/player reference,
+* position,
+* health,
+* age,
+* alive/dead status,
+* creation turn,
+* last recorded action if available.
+
+Cells do not need a visible unique identifier in the first version.
+
+Health rules:
+
+* Health ranges from 0 to 100.
+* Initial cells start with 100 health.
+* If health reaches 0, the cell dies.
+* Dead cells are immediately removed from the board.
+* Health cannot go below 0.
+* Resting recovers 3 health.
+* Resting cannot increase health above 100.
+* Eating/attacking causes 5 damage to the target enemy cell.
+* Movement does not cost health.
+* Eating does not recover health.
+
+Movement rules:
+
+* A cell can interact only with the 8 neighboring squares.
+* Valid directions:
+
+  * n: north
+  * s: south
+  * e: east
+  * w: west
+  * ne: northeast
+  * nw: northwest
+  * se: southeast
+  * sw: southwest
+* A cell moves one square per turn.
+* A cell may only move to an unoccupied square.
+* If the destination is outside the board, the action is canceled and the cell loses its action.
+* If the destination is occupied by an allied or enemy cell, the action is canceled and the cell loses its action.
+* Moving toward an enemy cell is not an attack.
+* To damage an enemy, the eat action must be used.
+
+Eat action rules:
+
+* Eat is the attack action.
+* The return code uses the letter “a”.
+* A cell can only eat enemy cells.
+* A cell cannot eat allied cells.
+* Eating distance is one square.
+* Eating must specify a valid direction.
+* If the target square is outside the board, the action is canceled.
+* If there is no enemy cell in that direction, the action is canceled.
+* If there is an enemy cell, apply 5 damage.
+* If the enemy reaches 0 health, remove it immediately from the board.
+* Eating does not heal the attacker.
+
+Reproduction rules:
+
+A cell can reproduce only if all conditions are met:
+
+* The cell has at least 50 health before reproducing.
+* The cell is less than 55 years old.
+* The target direction is valid.
+* The target square is inside the board.
+* The target square is unoccupied.
+* The returned action code is valid.
+
+If reproduction is valid:
+
+* The original cell’s current health is split in half.
+* If health is even, both cells receive half.
+* If health is odd, the original cell keeps the extra point.
+* Example: 51 becomes 26 for original and 25 for newborn.
+* Total health must be preserved.
+* The newborn belongs to the same team.
+* The newborn is placed in the selected direction.
+* The newborn starts at age 1.
+* The newborn does not act on the same turn in which it is born.
+* It can act starting from the following turn.
+
+If reproduction is invalid due to board conditions or health/age conditions:
+
+* The action is canceled.
+* The cell loses its action for that turn.
+
+Rest rules:
+
+* Rest consumes the cell’s action.
+* Rest restores 3 health.
+* Health cannot exceed 100.
+* A cell may rest at 100 health, but it gains no extra health.
+
+Turn system:
+
+* The global turn starts at 1.
+* Before Play, both players must have:
+
+  * name,
+  * color,
+  * valid function,
+  * confirmed configuration.
+* When Play is pressed, the match is locked.
+* Once locked, players, colors, code, rules, turn limit, and initial conditions cannot be edited.
+* Pause, if present, only pauses visualization or automatic execution.
+* Pause must not unlock editing.
+* Cells created during a turn do not act in that same turn.
+* Actions are resolved one by one.
+* The board is updated immediately after each valid action.
+* There are no simultaneous actions.
+* Each action uses the current board state at the moment the action is executed.
+* At the start of each turn, take a snapshot for execution ordering.
+* Sort living cells using:
+
+  1. lower age first,
+  2. lower creation turn first,
+  3. lower row in the start-of-turn snapshot,
+  4. lower column in the start-of-turn snapshot.
+* If a cell dies before its action arrives, it does not execute.
+* At the end of the turn:
+
+  * increase age by 1 for living cells that survived,
+  * do not apply aging damage,
+  * do not kill cells because of old age,
+  * evaluate end conditions,
+  * increment turn if simulation continues.
+
+Function programming rules:
+
+Each player writes a Python-like function.
+
+The first version is not full Python.
+
+Allowed:
+
+* simple conditionals,
+* literal returns of valid action codes,
+* reading only the allowed cell/environment data.
+
+Not allowed:
+
+* for loops,
+* while loops,
+* imports,
+* file access,
+* network access,
+* eval,
+* exec,
+* dangerous functions,
+* direct mutation of game state,
+* direct modification of health,
+* direct modification of age,
+* direct modification of position,
+* direct access to full hidden game state.
+
+The function must decide only which action the cell attempts to perform.
+
+Function input:
+
+The user function receives only system-provided data:
+
+Cell data:
+
+* health,
+* age,
+* position.
+
+Environment data:
+
+* current turn,
+* board size,
+* total health of the team,
+* information about the 8 neighboring squares,
+* presence of nearby allied cells,
+* presence of nearby enemy cells.
+
+Each neighboring square must be one of:
+
+* empty,
+* allied,
+* enemy,
+* outside.
+
+Function validation:
+
+Before starting the match, validate both player functions.
+
+Validation must check:
+
+* syntax is allowed,
+* only safe structures are used,
+* only valid literal return strings are used,
+* no loops,
+* no imports,
+* no dangerous instructions,
+* no forbidden access,
+* execution does not exceed 1 second,
+* function can run with a test context,
+* all returned values are valid action codes.
+
+If a function is invalid:
+
+* show clear error,
+* do not allow confirmation,
+* do not allow Play.
+
+If a function fails during simulation:
+
+* the affected cell loses its action,
+* the simulation continues,
+* the error is shown in the error panel.
+
+Valid action codes:
+
+Move:
+
+* mn: move north
+* ms: move south
+* me: move east
+* mw: move west
+* mne: move northeast
+* mnw: move northwest
+* mse: move southeast
+* msw: move southwest
+
+Eat:
+
+* an: eat north
+* as: eat south
+* ae: eat east
+* aw: eat west
+* ane: eat northeast
+* anw: eat northwest
+* ase: eat southeast
+* asw: eat southwest
+
+Reproduce:
+
+* rn: reproduce north
+* rs: reproduce south
+* re: reproduce east
+* rw: reproduce west
+* rne: reproduce northeast
+* rnw: reproduce northwest
+* rse: reproduce southeast
+* rsw: reproduce southwest
+
+Rest:
+
+* d: rest
+
+Invalid examples:
+
+* move
+* up
+* x
+* mnorth
+* empty string
+* dynamically generated action strings in the first version
+
+Victory and end conditions:
+
+* Default turn limit: 5000 turns.
+* If the limit is 5000, turn 5000 must be executed fully.
+* After the last allowed turn is fully executed, evaluate final result.
+* Simulation ends if only one team remains alive.
+* Simulation ends if both teams have no living cells.
+* Simulation ends if the turn limit is reached.
+* If only one team remains alive, that team wins.
+* If both teams have no living cells during the same turn close, the result is a draw.
+* If the turn limit is reached:
+
+  1. the team with more living cells wins,
+  2. if tied, the team with higher total health wins,
+  3. if still tied, the match is a draw.
+
+Final statistics must include:
+
+* player/team name,
+* team color,
+* number of living cells,
+* total health,
+* final turn,
+* match result,
+* cause of termination.
+
+Required screens:
+
+1. Configuration screen
+
+Must allow:
+
+* adding/configuring Player 1,
+* adding/configuring Player 2,
+* setting each player name,
+* setting each player color,
+* writing or loading each algorithm,
+* validating each algorithm,
+* showing validation errors,
+* confirming each player,
+* blocking Play if either player is missing or invalid.
+
+2. Simulation screen
+
+Must show:
+
+* 100x200 board,
+* cells with team colors,
+* current turn,
+* turn limit,
+* Play/Pause controls,
+* error panel,
+* basic statistics,
+* living cells per team,
+* total health per team.
+
+During simulation:
+
+* no editing code,
+* no editing names,
+* no editing colors,
+* no editing rules,
+* no editing initial conditions.
+
+When selecting a cell, show:
+
+* team,
+* health,
+* age,
+* position,
+* last recorded action if available.
+
+3. Final screen
+
+Must show:
+
+* winner or draw,
+* player/team names,
+* living cells per team,
+* total health per team,
+* final turn,
+* cause of termination,
+* option to return to configuration and start a new match.
+
+Architecture requirement:
+
+Keep game rules separated from React.
+
+Preferred structure:
+
+```txt
+backend/
+  src/
+    game/
+      types.ts
+      constants.ts
+      directions.ts
+      board.ts
+      ordering.ts
+      actions.ts
+      engine.ts
+      validation.ts
+      scoring.ts
+    routes/
+      game.routes.ts
+      validation.routes.ts
+    server.ts
+  tests/
+    game/
+      board.test.ts
+      ordering.test.ts
+      actions.test.ts
+      engine.test.ts
+      validation.test.ts
+    api/
+      game.routes.test.ts
+      validation.routes.test.ts
+
+frontend/
+  src/
+    components/
+      ConfigurationScreen.tsx
+      PlayerConfigPanel.tsx
+      CodeEditorPanel.tsx
+      ValidationPanel.tsx
+      SimulationScreen.tsx
+      Board.tsx
+      CellInfoPanel.tsx
+      StatsPanel.tsx
+      ErrorPanel.tsx
+      FinalScreen.tsx
+    api/
+      gameApi.ts
+      validationApi.ts
+    types/
+      game.ts
+    App.tsx
+
+docs/
+  SPEC.md
+  ARCHITECTURE.md
+  API.md
+  TEST_PLAN.md
+  ROADMAP.md
+  FLOW.md
+  DECISIONS.md
+```
+
+You may adapt this structure to the existing project, but do not erase existing frontend work unnecessarily.
+
+Existing frontend requirement:
+
+I already have a frontend that is somewhat solid. First inspect the existing frontend and explain:
+
+* what can be kept,
+* what must be refactored,
+* what conflicts with the new requirements,
+* what is missing,
+* what must be connected to the backend/game engine.
+
+Do not rewrite the entire frontend blindly.
+
+SDD requirement:
+
+Use the docs as the source of truth.
+
+Before implementing new code, update the documentation:
+
+1. SPEC.md:
+
+   * full business rules,
+   * remove old trail-based requirements,
+   * remove old aging-damage/death rules,
+   * define age only as execution priority.
+
+2. FLOW.md:
+
+   * describe the flow from configuration to final screen,
+   * align with the flow diagram,
+   * explicitly remove aging damage and old-age death from the end-of-turn flow.
+
+3. ARCHITECTURE.md:
+
+   * explain game engine, frontend, backend, validation, tests,
+   * explain why rules live outside React.
+
+4. API.md:
+
+   * define endpoints for function validation, game setup, play/start, pause, tick, state, reset.
+
+5. TEST_PLAN.md:
+
+   * define unit tests for game engine,
+   * integration tests for backend,
+   * frontend tests for core screens.
+
+6. ROADMAP.md:
+
+   * define phases from documentation repair to engine repair to frontend integration.
+
+7. DECISIONS.md:
+
+   * record important decisions and removed rules:
+
+     * previous trail/main-cell concept removed,
+     * age damage removed,
+     * death at 90 removed,
+     * age only used for execution priority,
+     * no simultaneous actions,
+     * no online multiplayer,
+     * no full Python execution in MVP.
+
+TDD requirement:
+
+Do not continue implementing features without tests.
+
+First create or update tests that represent the business rules.
+
+Minimum game engine tests:
+
+Board:
+
+* creates a 100x200 board,
+* rejects positions outside board,
+* prevents more than one cell per square,
+* creates one initial cell per player,
+* random placement avoids occupied squares.
+
+Directions:
+
+* supports n, s, e, w, ne, nw, se, sw,
+* correctly calculates neighbor positions,
+* correctly marks outside neighbors.
+
+Movement:
+
+* valid move to empty square succeeds,
+* move outside board is canceled,
+* move to allied cell is canceled,
+* move to enemy cell is canceled,
+* moving toward enemy does not damage enemy.
+
+Eat:
+
+* eating enemy in adjacent direction applies 5 damage,
+* eating empty square cancels action,
+* eating outside board cancels action,
+* eating allied cell cancels action,
+* enemy at 0 health is removed immediately.
+
+Reproduction:
+
+* cell with at least 50 health and age less than 55 can reproduce into empty adjacent square,
+* cell with less than 50 health cannot reproduce,
+* cell age 55 or older cannot reproduce,
+* reproduction outside board is canceled,
+* reproduction into occupied square is canceled,
+* health split preserves total health,
+* odd health gives extra point to original cell,
+* newborn starts at age 1,
+* newborn does not act in same turn.
+
+Rest:
+
+* rest restores 3 health,
+* rest cannot exceed 100 health,
+* rest consumes action.
+
+Ordering:
+
+* younger cells act first,
+* if same age, lower creation turn acts first,
+* if still tied, lower start-of-turn row acts first,
+* if still tied, lower start-of-turn column acts first,
+* order uses start-of-turn snapshot and does not change due to movement during the turn,
+* dead cells are skipped.
+
+Age:
+
+* age increases by 1 at end of turn for surviving cells,
+* age does not reduce health,
+* age does not kill cells,
+* no 70-year damage rule exists,
+* no 90-year death rule exists.
+
+Turn and match state:
+
+* turn starts at 1,
+* newborn cells do not act until next turn,
+* board updates immediately after each action,
+* if only one team remains alive, simulation ends,
+* if both teams die, result is draw,
+* if turn limit is reached, winner is decided by living cells, then total health, then draw.
+
+Function validation:
+
+* accepts valid literal return codes,
+* rejects invalid return codes,
+* rejects loops,
+* rejects imports,
+* rejects eval/exec,
+* rejects unsafe access,
+* enforces timeout,
+* invalid function blocks Play,
+* runtime function error cancels only that cell’s action and logs error.
+
+Backend API tests:
+
+* validate player function,
+* reject invalid player function,
+* create/configure match,
+* block Play if either player is invalid,
+* start match after valid configuration,
+* lock match after Play,
+* pause does not unlock editing,
+* tick advances simulation,
+* get state returns board, turn, players, stats, errors,
+* reset returns to configuration state.
+
+Frontend tests:
+
+* configuration screen renders both players,
+* player name and color can be entered,
+* code can be entered,
+* validation errors are shown,
+* Play is disabled until both players are valid and confirmed,
+* simulation screen shows board, turn, stats, and errors,
+* editing is blocked after Play,
+* selected cell shows team, health, age, position, last action,
+* final screen shows winner/draw and statistics.
+
+Implementation phases:
+
+Phase 0: Context recovery
+
+* Inspect current files.
+* Identify existing frontend, backend, docs, tests.
+* Produce a short report:
+
+  * files found,
+  * what matches new requirements,
+  * what conflicts,
+  * what can be reused,
+  * what must be changed.
+* Do not implement yet.
+
+Phase 1: Documentation repair
+
+* Update or create docs.
+* Remove obsolete requirements.
+* Align docs with business requirements and flow diagram.
+* Explicitly document the age-rule override.
+
+Phase 2: Tests first
+
+* Add/update tests for the core game engine.
+* Tests may initially fail.
+* Do not hide failing tests.
+* Use tests as executable specification.
+
+Phase 3: Game engine repair
+
+* Implement or refactor the game engine until core tests pass.
+* Keep logic independent from React.
+* Keep functions small and understandable.
+
+Phase 4: Function validation
+
+* Implement safe validation for the Python-like user functions.
+* For MVP, it is acceptable to implement a constrained validator/interpreter instead of executing real Python, as long as documented.
+* Do not run unsafe arbitrary code.
+
+Phase 5: Backend integration
+
+* Add/update REST endpoints.
+* Add API tests.
+* Connect backend routes to engine and validation.
+
+Phase 6: Frontend alignment
+
+* Preserve useful existing frontend components.
+* Refactor only what is needed.
+* Align screens to:
+
+  * configuration,
+  * simulation,
+  * final result.
+* Connect frontend to backend or local engine depending on current architecture, but document the decision.
+
+Phase 7: Full flow verification
+
+* Run tests.
+* Run app locally.
+* Verify configuration → validation → Play → locked simulation → final result.
+* Update README with exact commands.
+
+Working style:
+
+For each phase:
+
+1. Explain what you are about to change.
+2. List files to inspect.
+3. List files to modify.
+4. Apply changes.
+5. Explain what changed.
+6. Tell me how to run tests.
+7. Stop and wait before moving to the next major phase if the changes are large.
+
+Do not remove existing working frontend code without explaining why.
+
+Do not invent new mechanics.
+
+Do not reintroduce:
+
+* main-cell trail gameplay,
+* age damage from 70,
+* automatic death at 90,
+* online multiplayer,
+* full Python execution without sandboxing,
+* database,
+* authentication,
+* bots,
+* advanced features outside MVP.
+
+Start now with Phase 0: Context recovery.
+
+First inspect the repository and produce a clear report before editing code.
