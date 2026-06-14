@@ -28,20 +28,7 @@ vi.mock('./api/gameApi', () => ({
 }));
 
 vi.mock('./components/GameBoard', () => ({
-  GameBoard: ({
-    cells,
-    onSelectCell,
-  }: {
-    cells: SimulationState['cells'];
-    onSelectCell: (cell: SimulationState['cells'][number] | null) => void;
-  }) => (
-    <div>
-      <div>Mock board</div>
-      <button type="button" onClick={() => onSelectCell(cells[0] ?? null)}>
-        Select first cell
-      </button>
-    </div>
-  ),
+  GameBoard: () => <div>Mock board</div>,
 }));
 
 function makeMatch(overrides: Partial<SimulationState> = {}): SimulationState {
@@ -100,7 +87,7 @@ function makeMatch(overrides: Partial<SimulationState> = {}): SimulationState {
         lastActionStatus: 'success',
       },
     ],
-    logs: [{ turn: 1, type: 'error', message: 'Runtime error example.' }],
+    logs: [{ turn: 1, type: 'action_failure', message: 'Alpha had 1 blocked action for re: destination is occupied.' }],
     result: null,
     ...overrides,
   };
@@ -152,22 +139,12 @@ describe('App', () => {
     await userEvent.click(screen.getByRole('button', { name: /start simulation/i }));
 
     expect(await screen.findByText('Mock board')).toBeInTheDocument();
-    expect(screen.getByText(/validation & runtime error telemetry/i)).toBeInTheDocument();
+    expect(screen.getByText(/blocked action feed/i)).toBeInTheDocument();
   });
 
-  it('shows selected cell details during simulation', async () => {
-    mockValidation.mockResolvedValue({ isValid: true, errors: [] });
-    mockStartMatch.mockResolvedValue(makeMatch());
-
+  it('shows the aggressive stress template option in setup', () => {
     render(<App />);
-    await validateBothPlayers();
-    await userEvent.click(screen.getByRole('button', { name: /start simulation/i }));
-
-    await userEvent.click(await screen.findByRole('button', { name: /select first cell/i }));
-
-    expect(screen.getAllByText('Alpha').length).toBeGreaterThan(0);
-    expect(screen.getByText('R3 C4')).toBeInTheDocument();
-    expect(screen.getAllByText('87').length).toBeGreaterThan(0);
+    expect(screen.getAllByRole('option', { name: /aggressive stress/i }).length).toBeGreaterThan(0);
   });
 
   it('shows final results when the backend returns a finished match', async () => {

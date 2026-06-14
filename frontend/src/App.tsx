@@ -77,7 +77,6 @@ export default function App() {
     turnDelay: 180,
   });
   const [matchState, setMatchState] = useState<SimulationState | null>(null);
-  const [selectedCellId, setSelectedCellId] = useState<string | null>(null);
   const [startErrors, setStartErrors] = useState<SetupIssue[]>([]);
   const simTimerRef = useRef<number | null>(null);
   const tickInFlightRef = useRef(false);
@@ -153,7 +152,6 @@ export default function App() {
 
   const setupIssues = [...collectSetupIssues([p1, p2]), ...startErrors];
   const canStart = setupIssues.length === 0;
-  const selectedCell = matchState?.cells.find((cell) => cell.id === selectedCellId && cell.alive) ?? null;
 
   const updatePlayer = (playerId: 1 | 2, nextPlayer: PlayerConfigForm) => {
     if (playerId === 1) {
@@ -188,7 +186,6 @@ export default function App() {
       });
 
       setMatchState(state);
-      setSelectedCellId(null);
       setScreen('simulation');
       setGameState('paused');
     } catch (error) {
@@ -232,7 +229,6 @@ export default function App() {
       turnLimit: settings.maxTurns,
     });
     setMatchState(restarted);
-    setSelectedCellId(null);
     setScreen('simulation');
     setGameState('paused');
   };
@@ -246,7 +242,6 @@ export default function App() {
       turnLimit: settings.maxTurns,
     });
     setMatchState(restarted);
-    setSelectedCellId(null);
     setScreen('simulation');
     setGameState('paused');
   };
@@ -260,7 +255,6 @@ export default function App() {
     setGameState('setup');
     setScreen('setup');
     setMatchState(null);
-    setSelectedCellId(null);
   };
 
   const handleEndMatch = async () => {
@@ -358,51 +352,7 @@ export default function App() {
                   p2Color={matchState.config.teams[1].color}
                   rows={matchState.config.boardRows}
                   cols={matchState.config.boardCols}
-                  selectedCellId={selectedCellId}
-                    onSelectCell={(cell) => setSelectedCellId(cell ? cell.id : null)}
                 />
-
-                <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 shadow-lg">
-                  <div className="flex items-center justify-between border-b border-slate-800 pb-2 mb-3">
-                    <h3 className="text-xs font-extrabold font-mono tracking-wider text-slate-200">
-                      SELECTED CELL
-                    </h3>
-                    <span className="text-[10px] font-mono text-slate-500">TURN {matchState.currentTurn}</span>
-                  </div>
-
-                  {selectedCell ? (
-                    <div className="grid grid-cols-2 gap-3 text-xs font-mono">
-                      <div className="bg-slate-950 border border-slate-850 rounded-lg p-3">
-                        <span className="text-slate-500 block mb-1">TEAM</span>
-                        <span style={{ color: selectedCell.teamColor }}>{selectedCell.teamName}</span>
-                      </div>
-                      <div className="bg-slate-950 border border-slate-850 rounded-lg p-3">
-                        <span className="text-slate-500 block mb-1">POSITION</span>
-                        <span className="text-white">
-                          R{selectedCell.position.row} C{selectedCell.position.col}
-                        </span>
-                      </div>
-                      <div className="bg-slate-950 border border-slate-850 rounded-lg p-3">
-                        <span className="text-slate-500 block mb-1">HEALTH</span>
-                        <span className="text-white">{selectedCell.health}</span>
-                      </div>
-                      <div className="bg-slate-950 border border-slate-850 rounded-lg p-3">
-                        <span className="text-slate-500 block mb-1">AGE</span>
-                        <span className="text-white">{selectedCell.age}</span>
-                      </div>
-                      <div className="bg-slate-950 border border-slate-850 rounded-lg p-3 col-span-2">
-                        <span className="text-slate-500 block mb-1">LAST ACTION</span>
-                        <span className="text-white">
-                          {selectedCell.lastAction} ({selectedCell.lastActionStatus})
-                        </span>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="text-xs font-mono text-slate-500 border border-dashed border-slate-800 rounded-lg px-4 py-6 text-center">
-                      Click a living cell on the board to inspect team, health, age, position, and last action.
-                    </div>
-                  )}
-                </div>
               </div>
 
               <div className="lg:col-span-3">

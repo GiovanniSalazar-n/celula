@@ -5,7 +5,7 @@ export type GameState = 'setup' | 'running' | 'paused' | 'finished';
 export type TeamId = 1 | 2;
 export type CellActionStatus = 'success' | 'failed' | 'invalid' | 'error' | 'none';
 export type MatchStatus = 'paused' | 'running' | 'finished';
-export type LogType = 'system' | 'error' | 'result';
+export type LogType = 'system' | 'error' | 'result' | 'action_failure';
 
 export interface ValidationResult {
   isValid: boolean;

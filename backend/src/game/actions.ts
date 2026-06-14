@@ -56,15 +56,15 @@ export function resolveAction(
   cell: Cell,
   action: ParsedAction,
   nextId: () => string,
-): void {
+): string | null {
   if (!cell.alive) {
-    return;
+    return 'cell is no longer alive.';
   }
 
   if (action.kind === 'rest') {
     cell.health = Math.min(MAX_HEALTH, cell.health + REST_HEAL);
     cell.lastActionStatus = 'success';
-    return;
+    return null;
   }
 
   const [rowDelta, colDelta] = DIRECTION_DELTAS[action.direction];
@@ -74,7 +74,7 @@ export function resolveAction(
   };
   if (!isInsideBoard(state.board, target)) {
     cell.lastActionStatus = 'failed';
-    return;
+    return 'target is outside the board.';
   }
 
   const occupantId = getCellIdAtCoordinates(state.board, target.row, target.col);
@@ -83,19 +83,29 @@ export function resolveAction(
   if (action.kind === 'move') {
     if (occupant) {
       cell.lastActionStatus = 'failed';
-      return;
+      return 'destination is occupied.';
     }
 
     moveCell(state.board, cell.position, target, cell.id);
     cell.position = target;
     cell.lastActionStatus = 'success';
-    return;
+    return null;
   }
 
   if (action.kind === 'eat') {
-    if (!occupant || !occupant.alive || occupant.teamId === cell.teamId) {
+    if (!occupant) {
       cell.lastActionStatus = 'failed';
-      return;
+      return 'target square is empty.';
+    }
+
+    if (!occupant.alive) {
+      cell.lastActionStatus = 'failed';
+      return 'target is not alive.';
+    }
+
+    if (occupant.teamId === cell.teamId) {
+      cell.lastActionStatus = 'failed';
+      return 'target belongs to the same team.';
     }
 
     occupant.health = Math.max(0, occupant.health - EAT_DAMAGE);
@@ -105,12 +115,22 @@ export function resolveAction(
     }
 
     cell.lastActionStatus = 'success';
-    return;
+    return null;
   }
 
-  if (cell.health < REPRODUCE_MIN_HEALTH || cell.age >= REPRODUCE_MAX_AGE_EXCLUSIVE || occupant) {
+  if (cell.health < REPRODUCE_MIN_HEALTH) {
     cell.lastActionStatus = 'failed';
-    return;
+    return `reproduction requires at least ${REPRODUCE_MIN_HEALTH} health.`;
+  }
+
+  if (cell.age >= REPRODUCE_MAX_AGE_EXCLUSIVE) {
+    cell.lastActionStatus = 'failed';
+    return `reproduction requires age below ${REPRODUCE_MAX_AGE_EXCLUSIVE}.`;
+  }
+
+  if (occupant) {
+    cell.lastActionStatus = 'failed';
+    return 'destination is occupied.';
   }
 
   const childHealth = Math.floor(cell.health / 2);
@@ -136,4 +156,5 @@ export function resolveAction(
   state.cells.push(child);
   cellsById.set(child.id, child);
   placeCell(state.board, child);
+  return null;
 }

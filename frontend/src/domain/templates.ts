@@ -45,6 +45,45 @@ export const CODE_TEMPLATES = {
     if cell["health"] >= 50 and environment["sw"] == "empty":
         return "rsw"
     return "d"`,
+  AGGRESSIVE_STRESS: `def action(cell, environment):
+    if environment["n"] == "enemy":
+        return "an"
+    if environment["s"] == "enemy":
+        return "as"
+    if environment["e"] == "enemy":
+        return "ae"
+    if environment["w"] == "enemy":
+        return "aw"
+    if environment["ne"] == "enemy":
+        return "ane"
+    if environment["nw"] == "enemy":
+        return "anw"
+    if environment["se"] == "enemy":
+        return "ase"
+    if environment["sw"] == "enemy":
+        return "asw"
+
+    if cell["health"] <= 1:
+        return "d"
+
+    if cell["health"] >= 50 and environment["n"] == "empty":
+        return "rn"
+    if cell["health"] >= 50 and environment["s"] == "empty":
+        return "rs"
+    if cell["health"] >= 50 and environment["e"] == "empty":
+        return "re"
+    if cell["health"] >= 50 and environment["w"] == "empty":
+        return "rw"
+    if cell["health"] >= 50 and environment["ne"] == "empty":
+        return "rne"
+    if cell["health"] >= 50 and environment["nw"] == "empty":
+        return "rnw"
+    if cell["health"] >= 50 and environment["se"] == "empty":
+        return "rse"
+    if cell["health"] >= 50 and environment["sw"] == "empty":
+        return "rsw"
+
+    return "d"`,
   CROWD_SURVIVAL_TRANSLATED: `def action(cell, environment):
     if cell["health"] <= 1:
         return "d"

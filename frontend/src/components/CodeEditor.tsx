@@ -92,6 +92,7 @@ function PlayerPanel({
               <option value="EXPANDING_COLONY">Colony Expansion</option>
               <option value="SENTINEL">Sentinel</option>
               <option value="RANDOM_EXPLORER">Explorer</option>
+              <option value="AGGRESSIVE_STRESS">Aggressive Stress</option>
               <option value="CROWD_SURVIVAL_TRANSLATED">Imported Strategy</option>
             </select>
           </div>
@@ -253,6 +254,10 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
               <div className="border-t border-slate-850 pt-2">
                 <p className="text-cyan-400 font-bold">Rest</p>
                 <p className="text-slate-400 text-[10px]">Use `d` to heal 3 health, capped at 100.</p>
+              </div>
+              <div className="border-t border-slate-850 pt-2">
+                <p className="text-cyan-400 font-bold">Aggressive Stress</p>
+                <p className="text-slate-400 text-[10px]">Use the `Aggressive Stress` template to benchmark heavy reproduction and blocked-action behavior.</p>
               </div>
               <div className="border-t border-slate-850 pt-2">
                 <p className="text-cyan-400 font-bold">Imported Strategy</p>

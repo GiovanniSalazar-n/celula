@@ -119,11 +119,12 @@ Rest:
 * code can be entered,
 * validation errors are shown,
 * imported strategy template is available,
+* aggressive stress template is available,
 * start is disabled until both players are valid,
 * simulation screen shows board, turn, stats, and errors,
 * simulation screen can end a match early,
 * editing is blocked after start,
-* selected cell details are shown,
+* board visuals render without hover or selected-cell interaction,
 * final screen shows winner or draw and statistics.
 
 ## Manual Verification

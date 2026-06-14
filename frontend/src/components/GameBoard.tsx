@@ -8,8 +8,6 @@ interface GameBoardProps {
   p2Color: string;
   rows: number;
   cols: number;
-  selectedCellId: string | null;
-  onSelectCell: (cell: Cell | null) => void;
 }
 
 export const GameBoard: React.FC<GameBoardProps> = ({
@@ -18,13 +16,10 @@ export const GameBoard: React.FC<GameBoardProps> = ({
   p2Color,
   rows,
   cols,
-  selectedCellId,
-  onSelectCell,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [dimensions, setDimensions] = useState({ width: 800, height: 400 });
-  const [hoveredCell, setHoveredCell] = useState<{ row: number; col: number; cell: Cell | null } | null>(null);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -92,74 +87,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({
       context.fillRect(x + 0.5, y + 0.5, Math.max(1, cellWidth - 0.5), Math.max(1, cellHeight - 0.5));
       context.shadowBlur = 0;
     });
-
-    if (selectedCellId) {
-      const selectedCell = cells.find((cell) => cell.id === selectedCellId && cell.alive);
-      if (selectedCell) {
-        const x = selectedCell.position.col * cellWidth;
-        const y = selectedCell.position.row * cellHeight;
-        const color = selectedCell.teamId === 1 ? p1Color : p2Color;
-
-        context.strokeStyle = '#ffffff';
-        context.lineWidth = 1.25;
-        context.strokeRect(x - 2, y - 2, cellWidth + 4, cellHeight + 4);
-
-        context.strokeStyle = color;
-        context.lineWidth = 1;
-        context.beginPath();
-        context.moveTo(x - 6, y + cellHeight / 2);
-        context.lineTo(x + cellWidth + 6, y + cellHeight / 2);
-        context.moveTo(x + cellWidth / 2, y - 6);
-        context.lineTo(x + cellWidth / 2, y + cellHeight + 6);
-        context.stroke();
-      }
-    }
-  }, [cells, cols, dimensions, p1Color, p2Color, rows, selectedCellId]);
-
-  const resolvePointerCell = (event: React.MouseEvent<HTMLCanvasElement>) => {
-    const canvas = canvasRef.current;
-    if (!canvas) {
-      return null;
-    }
-
-    const rect = canvas.getBoundingClientRect();
-    const x = event.clientX - rect.left;
-    const y = event.clientY - rect.top;
-    const cellWidth = dimensions.width / cols;
-    const cellHeight = dimensions.height / rows;
-
-    return {
-      row: Math.max(0, Math.min(rows - 1, Math.floor(y / cellHeight))),
-      col: Math.max(0, Math.min(cols - 1, Math.floor(x / cellWidth))),
-    };
-  };
-
-  const handleCanvasClick = (event: React.MouseEvent<HTMLCanvasElement>) => {
-    const pointer = resolvePointerCell(event);
-    if (!pointer) {
-      return;
-    }
-
-    const clickedCell =
-      cells.find(
-        (cell) => cell.alive && cell.position.row === pointer.row && cell.position.col === pointer.col,
-      ) ?? null;
-    onSelectCell(clickedCell);
-  };
-
-  const handleCanvasMouseMove = (event: React.MouseEvent<HTMLCanvasElement>) => {
-    const pointer = resolvePointerCell(event);
-    if (!pointer) {
-      return;
-    }
-
-    const cell =
-      cells.find(
-        (current) => current.alive && current.position.row === pointer.row && current.position.col === pointer.col,
-      ) ?? null;
-
-    setHoveredCell({ ...pointer, cell });
-  };
+  }, [cells, cols, dimensions, p1Color, p2Color, rows]);
 
   return (
     <div className="relative flex flex-col bg-slate-900 border border-slate-700/60 rounded-xl overflow-hidden p-3 shadow-xl">
@@ -171,34 +99,18 @@ export const GameBoard: React.FC<GameBoardProps> = ({
           </span>
         </div>
         <div className="flex items-center gap-4">
-          {hoveredCell && (
-            <span className="text-cyan-400">
-              HOVER: R{hoveredCell.row} C{hoveredCell.col}
-              {hoveredCell.cell && (
-                <span
-                  className="ml-[6px]"
-                  style={{ color: hoveredCell.cell.teamId === 1 ? p1Color : p2Color }}
-                >
-                  [{hoveredCell.cell.teamName} - HP: {hoveredCell.cell.health}]
-                </span>
-              )}
-            </span>
-          )}
           <span className="text-slate-500">ZOOM: FIT</span>
         </div>
       </div>
 
       <div
         ref={containerRef}
-        className="relative w-full aspect-[2/1] bg-[#0a0f1d] cursor-crosshair rounded-lg overflow-hidden border border-slate-800"
+        className="relative w-full aspect-[2/1] bg-[#0a0f1d] rounded-lg overflow-hidden border border-slate-800"
       >
         <canvas
           ref={canvasRef}
           width={dimensions.width}
           height={dimensions.height}
-          onClick={handleCanvasClick}
-          onMouseMove={handleCanvasMouseMove}
-          onMouseLeave={() => setHoveredCell(null)}
           className="block w-full h-full"
         />
 
@@ -212,7 +124,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({
       </div>
 
       <div className="flex justify-between items-center mt-2 text-[10px] font-mono text-slate-500">
-        <span>SELECT ANY LIVING CELL TO INSPECT ITS CURRENT STATE</span>
+        <span>LIVE BOARD VISUALIZATION</span>
         <div className="flex gap-2">
           <span className="flex items-center gap-1">
             <span className="w-2 h-2 rounded-sm" style={{ backgroundColor: p1Color }} />

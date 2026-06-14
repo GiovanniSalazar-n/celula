@@ -6,7 +6,7 @@ export type ActionCode = 'd' | `m${Direction}` | `a${Direction}` | `r${Direction
 export type NeighborState = 'empty' | 'allied' | 'enemy' | 'outside';
 export type MatchStatus = 'paused' | 'running' | 'finished';
 export type CellActionStatus = 'success' | 'failed' | 'invalid' | 'error' | 'none';
-export type LogType = 'system' | 'error' | 'result';
+export type LogType = 'system' | 'error' | 'result' | 'action_failure';
 
 export interface BoardPosition {
   row: number;

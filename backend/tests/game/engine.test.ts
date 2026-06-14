@@ -221,4 +221,31 @@ describe('engine', () => {
     const advanced = advanceSimulation(state, 3);
     expect(advanced.currentTurn).toBe(4);
   });
+
+  it('aggregates blocked action logs by team and reason', () => {
+    const config = makeMatchConfig(
+      `def action(cell, environment):
+    if cell["health"] >= 50:
+        return "re"
+    return "d"`,
+      `def action(cell, environment):
+    return "d"`,
+      5,
+    );
+
+    const next = runSimulationTurn(
+      createSimulationState(config, {
+        startingCells: [
+          makeCell(config.teams[0], 'a', 2, 2, { health: 80 }),
+          makeCell(config.teams[0], 'b', 2, 3, { health: 80 }),
+          makeCell(config.teams[1], 'enemy', 4, 4),
+        ],
+      }),
+    );
+
+    const failureLog = next.logs.find((log) => log.type === 'action_failure');
+    expect(failureLog?.teamId).toBe(1);
+    expect(failureLog?.message).toContain('Alpha had');
+    expect(failureLog?.message).toContain('blocked action');
+  });
 });

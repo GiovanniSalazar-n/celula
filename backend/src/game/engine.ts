@@ -29,6 +29,14 @@ interface CreateSimulationOptions {
   status?: SimulationState['status'];
 }
 
+interface AggregatedActionFailure {
+  teamId: TeamId;
+  teamName: string;
+  actionCode: string;
+  reason: string;
+  count: number;
+}
+
 export function startMatch(input: MatchStartInput, rng: () => number = Math.random): { match: SimulationState | null; errors: string[] } {
   const issues = validateMatchSetup(input.players);
   if (issues.length > 0) {
@@ -135,6 +143,7 @@ function runSimulationTurnInternal(
   const programOne = getValidatedProgram(teamOne);
   const programTwo = getValidatedProgram(teamTwo);
   const logs: TurnLog[] = [];
+  const aggregatedActionFailures = new Map<string, AggregatedActionFailure>();
   let nextCellId = state.nextCellId;
   const setupMs = captureProfile ? performance.now() - setupStartedAt : 0;
 
@@ -210,11 +219,15 @@ function runSimulationTurnInternal(
         : null;
     const targetHealthBefore = targetCellBefore?.health ?? 0;
 
-    resolveAction({ board, cells, currentTurn: turn }, cellsById, cell, parsedAction, () => {
+    const failureReason = resolveAction({ board, cells, currentTurn: turn }, cellsById, cell, parsedAction, () => {
       const childId = `cell-${nextCellId}`;
       nextCellId += 1;
       return childId;
     });
+
+    if (failureReason) {
+      recordActionFailure(aggregatedActionFailures, cell, parsedAction.code, failureReason);
+    }
 
     if (parsedAction.kind === 'rest') {
       teamHealthById.set(cell.teamId, (teamHealthById.get(cell.teamId) ?? 0) + (cell.health - actingHealthBefore));
@@ -226,6 +239,17 @@ function runSimulationTurnInternal(
         (teamHealthById.get(targetCellBefore.teamId) ?? 0) + (targetCellBefore.health - targetHealthBefore),
       );
     }
+  }
+
+  for (const entry of aggregatedActionFailures.values()) {
+    logs.push({
+      turn,
+      type: 'action_failure',
+      message:
+        `${entry.teamName} had ${entry.count} blocked ${entry.count === 1 ? 'action' : 'actions'} ` +
+        `for ${entry.actionCode}: ${entry.reason}`,
+      teamId: entry.teamId,
+    });
   }
   const actionLoopMs = captureProfile ? performance.now() - actionLoopStartedAt : 0;
 
@@ -501,4 +525,27 @@ function resolveTargetCell(
   const [rowDelta, colDelta] = DIRECTION_DELTAS[direction];
   const targetId = getCellIdAtCoordinates(board, cell.position.row + rowDelta, cell.position.col + colDelta);
   return targetId ? cellsById.get(targetId) ?? null : null;
+}
+
+function recordActionFailure(
+  failures: Map<string, AggregatedActionFailure>,
+  cell: Cell,
+  actionCode: string,
+  reason: string,
+): void {
+  const key = `${cell.teamId}:${actionCode}:${reason}`;
+  const existing = failures.get(key);
+
+  if (existing) {
+    existing.count += 1;
+    return;
+  }
+
+  failures.set(key, {
+    teamId: cell.teamId,
+    teamName: cell.teamName,
+    actionCode,
+    reason,
+    count: 1,
+  });
 }
