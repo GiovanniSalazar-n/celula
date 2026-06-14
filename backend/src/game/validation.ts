@@ -8,6 +8,7 @@ import type {
   PlayerSubmission,
   Statement,
   StrategyCellContext,
+  StrategyExecutor,
   StrategyEnvironmentContext,
   StrategyProgram,
   ValidationResult,
@@ -131,6 +132,7 @@ export function validateStrategy(code: string): ValidationResult {
     }
 
     const program: StrategyProgram = { body: statements };
+    program.executor = compileProgram(program);
     const startedAt = Date.now();
     const execution = executeStrategy(program, SAMPLE_CELL, SAMPLE_ENVIRONMENT);
     if (Date.now() - startedAt > 1000) {
@@ -160,6 +162,13 @@ export function executeStrategy(
   environment: StrategyEnvironmentContext,
 ): { action: string | null; error: string | null } {
   try {
+    if (program.executor) {
+      return {
+        action: program.executor(cell, environment),
+        error: null,
+      };
+    }
+
     for (const statement of program.body) {
       const result = executeStatement(statement, cell, environment);
       if (result) {
@@ -759,5 +768,89 @@ function getLookupValue(
       return environment.west_occupied_count;
     default:
       throw new Error(`Environment key "${key}" is not allowed.`);
+  }
+}
+
+function compileProgram(program: StrategyProgram): StrategyExecutor {
+  const executor = compileStatements(program.body);
+
+  return (cell, environment) => executor(cell, environment);
+}
+
+function compileStatements(statements: Statement[]): StrategyExecutor {
+  const compiledStatements = statements.map((statement) => compileStatement(statement));
+
+  return (cell, environment) => {
+    for (const compiledStatement of compiledStatements) {
+      const result = compiledStatement(cell, environment);
+      if (result !== null) {
+        return result;
+      }
+    }
+
+    return null;
+  };
+}
+
+function compileStatement(statement: Statement): StrategyExecutor {
+  if (statement.type === 'return') {
+    const value = statement.value;
+    return () => value;
+  }
+
+  const compiledCondition = compileExpression(statement.condition);
+  const compiledConsequent = compileStatements(statement.consequent);
+  const compiledAlternate = statement.alternate ? compileStatements(statement.alternate) : null;
+
+  return (cell, environment) => {
+    if (toBoolean(compiledCondition(cell, environment))) {
+      return compiledConsequent(cell, environment);
+    }
+
+    return compiledAlternate ? compiledAlternate(cell, environment) : null;
+  };
+}
+
+function compileExpression(
+  expression: Expression,
+): (cell: StrategyCellContext, environment: StrategyEnvironmentContext) => string | number | boolean {
+  switch (expression.type) {
+    case 'literal': {
+      const value = expression.value;
+      return () => value;
+    }
+    case 'lookup': {
+      const source = expression.source;
+      const key = expression.key;
+      return (cell, environment) => getLookupValue(source, key, cell, environment);
+    }
+    case 'unary': {
+      const compiledExpression = compileExpression(expression.expression);
+      return (cell, environment) => !toBoolean(compiledExpression(cell, environment));
+    }
+    case 'binary': {
+      const compiledLeft = compileExpression(expression.left);
+      const compiledRight = compileExpression(expression.right);
+      switch (expression.operator) {
+        case 'and':
+          return (cell, environment) =>
+            toBoolean(compiledLeft(cell, environment)) && toBoolean(compiledRight(cell, environment));
+        case 'or':
+          return (cell, environment) =>
+            toBoolean(compiledLeft(cell, environment)) || toBoolean(compiledRight(cell, environment));
+        case '==':
+          return (cell, environment) => compiledLeft(cell, environment) === compiledRight(cell, environment);
+        case '!=':
+          return (cell, environment) => compiledLeft(cell, environment) !== compiledRight(cell, environment);
+        case '<':
+          return (cell, environment) => Number(compiledLeft(cell, environment)) < Number(compiledRight(cell, environment));
+        case '<=':
+          return (cell, environment) => Number(compiledLeft(cell, environment)) <= Number(compiledRight(cell, environment));
+        case '>':
+          return (cell, environment) => Number(compiledLeft(cell, environment)) > Number(compiledRight(cell, environment));
+        case '>=':
+          return (cell, environment) => Number(compiledLeft(cell, environment)) >= Number(compiledRight(cell, environment));
+      }
+    }
   }
 }

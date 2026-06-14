@@ -6,15 +6,11 @@ interface TeamSeed {
   color: string;
 }
 
-function toKey(position: BoardPosition): string {
-  return `${position.row},${position.col}`;
-}
-
 export function createBoard(rows: number, cols: number): BoardState {
   return {
     rows,
     cols,
-    occupancy: new Map<string, string>(),
+    occupancy: new Array<string | undefined>(rows * cols),
   };
 }
 
@@ -22,7 +18,7 @@ export function cloneBoard(board: BoardState): BoardState {
   return {
     rows: board.rows,
     cols: board.cols,
-    occupancy: new Map(board.occupancy),
+    occupancy: board.occupancy.slice(),
   };
 }
 
@@ -30,8 +26,16 @@ export function isInsideBoard(board: BoardState, position: BoardPosition): boole
   return position.row >= 0 && position.row < board.rows && position.col >= 0 && position.col < board.cols;
 }
 
+export function getBoardIndex(board: BoardState, row: number, col: number): number {
+  return row * board.cols + col;
+}
+
+export function getCellIdAtCoordinates(board: BoardState, row: number, col: number): string | undefined {
+  return board.occupancy[getBoardIndex(board, row, col)];
+}
+
 export function getCellIdAt(board: BoardState, position: BoardPosition): string | undefined {
-  return board.occupancy.get(toKey(position));
+  return getCellIdAtCoordinates(board, position.row, position.col);
 }
 
 export function placeCell(board: BoardState, cell: Cell): void {
@@ -43,16 +47,16 @@ export function placeCell(board: BoardState, cell: Cell): void {
     throw new Error('Cannot place more than one cell in the same square.');
   }
 
-  board.occupancy.set(toKey(cell.position), cell.id);
+  board.occupancy[getBoardIndex(board, cell.position.row, cell.position.col)] = cell.id;
 }
 
 export function removeCell(board: BoardState, position: BoardPosition): void {
-  board.occupancy.delete(toKey(position));
+  board.occupancy[getBoardIndex(board, position.row, position.col)] = undefined;
 }
 
 export function moveCell(board: BoardState, from: BoardPosition, to: BoardPosition, cellId: string): void {
-  board.occupancy.delete(toKey(from));
-  board.occupancy.set(toKey(to), cellId);
+  board.occupancy[getBoardIndex(board, from.row, from.col)] = undefined;
+  board.occupancy[getBoardIndex(board, to.row, to.col)] = cellId;
 }
 
 export function buildBoardFromCells(rows: number, cols: number, cells: Cell[]): BoardState {

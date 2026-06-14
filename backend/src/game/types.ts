@@ -52,7 +52,7 @@ export interface Cell {
 export interface BoardState {
   rows: number;
   cols: number;
-  occupancy: Map<string, string>;
+  occupancy: Array<string | undefined>;
 }
 
 export interface TeamSummary {
@@ -110,7 +110,13 @@ export interface SerializedSimulationState {
 
 export interface StrategyProgram {
   body: Statement[];
+  executor?: StrategyExecutor;
 }
+
+export type StrategyExecutor = (
+  cell: StrategyCellContext,
+  environment: StrategyEnvironmentContext,
+) => string | null;
 
 export type Statement = ReturnStatement | IfStatement;
 
@@ -193,4 +199,46 @@ export type ParsedAction =
 export interface MatchStartInput {
   players: [PlayerSubmission, PlayerSubmission];
   turnLimit?: number;
+}
+
+export interface StressTurnMetric {
+  turn: number;
+  livingCellsBefore: number;
+  livingCellsAfter: number;
+  logsAdded: number;
+  setupMs: number;
+  actionLoopMs: number;
+  cleanupMs: number;
+  resultMs: number;
+  simulationMs: number;
+  serializationMs: number;
+  totalMs: number;
+  ended: boolean;
+}
+
+export interface StressProfileSummary {
+  strategyLabel: string;
+  requestedTurns: number;
+  executedTurns: number;
+  completedNaturally: boolean;
+  finalTurn: number;
+  maxPopulation: number;
+  finalPopulation: number;
+  averageSetupMs: number;
+  averageActionLoopMs: number;
+  averageCleanupMs: number;
+  averageResultMs: number;
+  averageSimulationMs: number;
+  averageSerializationMs: number;
+  averageTotalMs: number;
+  slowestTurns: StressTurnMetric[];
+  metrics: StressTurnMetric[];
+}
+
+export interface TurnExecutionProfile {
+  setupMs: number;
+  actionLoopMs: number;
+  cleanupMs: number;
+  resultMs: number;
+  totalMs: number;
 }

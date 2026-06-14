@@ -93,6 +93,12 @@ Rest:
 * accepts the translated legacy helper environment keys,
 * runtime strategy failure only cancels the acting cell.
 
+### Profiling
+
+* aggressive stress strategy remains valid,
+* stress profile collects turn-by-turn timing metrics,
+* stress profile report is readable from the CLI output.
+
 ## Backend API Tests
 
 * validate player function,
@@ -126,9 +132,10 @@ Before sign-off:
 
 1. run backend tests,
 2. run frontend tests,
-3. start backend and frontend locally,
-4. validate both sample strategies,
-5. start a match,
-6. play, pause, single-step, and end a match early,
-7. confirm final result screen,
-8. return to configuration and start again.
+3. run the stress profile command for the aggressive reproduction strategy,
+4. start backend and frontend locally,
+5. validate both sample strategies,
+6. start a match,
+7. play, pause, single-step, and end a match early,
+8. confirm final result screen,
+9. return to configuration and start again.

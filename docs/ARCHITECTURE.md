@@ -75,12 +75,13 @@ docs/
 * `constants.ts`: board size, health rules, turn limit, action constants.
 * `directions.ts`: 8-direction coordinate deltas.
 * `types.ts`: shared engine contracts.
-* `board.ts`: board occupancy, bounds checks, neighbor inspection, initial placement.
+* `board.ts`: board occupancy, bounds checks, neighbor inspection, initial placement. The profiling branch uses a dense indexed occupancy array internally instead of string-keyed map lookups.
 * `ordering.ts`: deterministic start-of-turn ordering.
 * `actions.ts`: action parsing and move/eat/reproduce/rest resolution.
 * `validation.ts`: safe parser and interpreter for the Python-like strategy subset.
 * `scoring.ts`: team summaries and final result resolution.
 * `engine.ts`: match creation and turn advancement orchestration.
+* `profile/stressProfile.ts`: repeatable timing and population profiling for the aggressive reproduction stress strategy.
 
 ### API Layer
 
@@ -97,6 +98,20 @@ The existing frontend is preserved as much as possible:
 * selection panels, logs, and final result views remain presentation-focused.
 
 React does not calculate turn order, damage, reproduction, or end conditions. It fetches state from the backend and renders it.
+
+## Profiling Workflow
+
+The profiling branch adds a backend stress-profile command for the known aggressive reproduction strategy. It measures:
+
+* per-turn simulation time,
+* per-turn setup, action-loop, cleanup, and result time,
+* per-turn serialization time,
+* population before and after each turn,
+* slowest turns in the run.
+
+This isolates whether slowdown is coming primarily from engine compute, state size growth, or frontend-facing serialization.
+
+The latest optimization pass showed that direct indexed occupancy lookups and ordered-cell iteration reduce engine hot-loop cost more than transport changes did. The branch remains rule-compatible with `main`; only internal data layout and execution flow changed.
 
 ## Match Lifecycle
 

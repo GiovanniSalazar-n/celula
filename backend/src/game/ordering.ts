@@ -8,26 +8,45 @@ export interface TurnOrderEntry {
   col: number;
 }
 
+export function compareCellsForTurn(
+  left: Pick<Cell, 'age' | 'creationTurn' | 'position'>,
+  right: Pick<Cell, 'age' | 'creationTurn' | 'position'>,
+): number {
+  if (left.age !== right.age) {
+    return left.age - right.age;
+  }
+  if (left.creationTurn !== right.creationTurn) {
+    return left.creationTurn - right.creationTurn;
+  }
+  if (left.position.row !== right.position.row) {
+    return left.position.row - right.position.row;
+  }
+  return left.position.col - right.position.col;
+}
+
 export function buildTurnOrder(cells: Cell[]): TurnOrderEntry[] {
-  return cells
-    .filter((cell) => cell.alive)
-    .map((cell) => ({
+  const order: TurnOrderEntry[] = [];
+
+  for (const cell of cells) {
+    if (!cell.alive) {
+      continue;
+    }
+
+    order.push({
       id: cell.id,
       age: cell.age,
       creationTurn: cell.creationTurn,
       row: cell.position.row,
       col: cell.position.col,
-    }))
-    .sort((left, right) => {
-      if (left.age !== right.age) {
-        return left.age - right.age;
-      }
-      if (left.creationTurn !== right.creationTurn) {
-        return left.creationTurn - right.creationTurn;
-      }
-      if (left.row !== right.row) {
-        return left.row - right.row;
-      }
-      return left.col - right.col;
     });
+  }
+
+  order.sort((left, right) =>
+    compareCellsForTurn(
+      { age: left.age, creationTurn: left.creationTurn, position: { row: left.row, col: left.col } },
+      { age: right.age, creationTurn: right.creationTurn, position: { row: right.row, col: right.col } },
+    ),
+  );
+
+  return order;
 }
