@@ -1,6 +1,7 @@
 import { EAT_DAMAGE, INITIAL_AGE, MAX_HEALTH, REPRODUCE_MAX_AGE_EXCLUSIVE, REPRODUCE_MIN_HEALTH, REST_HEAL } from './constants.js';
 import { DIRECTIONS } from './directions.js';
-import { getCellIdAt, getNeighborPosition, isInsideBoard, moveCell, placeCell, removeCell } from './board.js';
+import { getCellIdAtCoordinates, isInsideBoard, moveCell, placeCell, removeCell } from './board.js';
+import { DIRECTION_DELTAS } from './directions.js';
 import type { ActionCode, Cell, Direction, ParsedAction, SimulationState } from './types.js';
 
 const DIRECTION_SET = new Set<string>(DIRECTIONS);
@@ -66,13 +67,17 @@ export function resolveAction(
     return;
   }
 
-  const target = getNeighborPosition(cell.position, action.direction);
+  const [rowDelta, colDelta] = DIRECTION_DELTAS[action.direction];
+  const target = {
+    row: cell.position.row + rowDelta,
+    col: cell.position.col + colDelta,
+  };
   if (!isInsideBoard(state.board, target)) {
     cell.lastActionStatus = 'failed';
     return;
   }
 
-  const occupantId = getCellIdAt(state.board, target);
+  const occupantId = getCellIdAtCoordinates(state.board, target.row, target.col);
   const occupant = occupantId ? cellsById.get(occupantId) : undefined;
 
   if (action.kind === 'move') {

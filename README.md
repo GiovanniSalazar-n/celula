@@ -57,6 +57,18 @@ Frontend only:
 npm run test:frontend
 ```
 
+Stress profile:
+
+```bash
+npm run profile:stress -- --turns 250 --top 5
+```
+
+Longer stress profile:
+
+```bash
+npm run profile:stress -- --turns 1000 --top 10
+```
+
 ## Docker
 
 The dev container setup is intentionally kept simple and unchanged in behavior:
@@ -68,4 +80,4 @@ docker compose exec dev bash
 
 ## Documentation
 
-See the [docs](</C:/Users/IGNITER/Desktop/proyectos/ProyectoCelulas/docs>) directory for the specification, architecture, API, test plan, roadmap, flow, and decisions.
+See the [docs](docs) directory for the specification, architecture, API, test plan, roadmap, flow, decisions, and profiling notes.
