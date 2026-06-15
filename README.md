@@ -83,4 +83,4 @@ The backend is available at [http://localhost:3000](http://localhost:3000).
 
 ## Documentation
 
-See the [docs](docs) directory for the specification, architecture, API, test plan, roadmap, flow, decisions, and profiling notes.
+See the [docs](docs) directory for the specification, architecture, API, test plan, roadmap, flow, decisions, profiling notes, and optimization notes.
