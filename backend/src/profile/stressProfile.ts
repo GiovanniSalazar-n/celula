@@ -99,6 +99,9 @@ export function runStressProfile(options: StressProfileOptions = {}): StressProf
       livingCellsBefore,
       livingCellsAfter,
       logsAdded: state.logs.length - logsBefore,
+      cellCloneMs: profile.cellCloneMs,
+      orderSortMs: profile.orderSortMs,
+      boardCloneMs: profile.boardCloneMs,
       setupMs: profile.setupMs,
       actionLoopMs: profile.actionLoopMs,
       cleanupMs: profile.cleanupMs,
@@ -122,6 +125,9 @@ export function runStressProfile(options: StressProfileOptions = {}): StressProf
     finalTurn: state.currentTurn,
     maxPopulation,
     finalPopulation: state.cells.length,
+    averageCellCloneMs: average(metrics.map((metric) => metric.cellCloneMs)),
+    averageOrderSortMs: average(metrics.map((metric) => metric.orderSortMs)),
+    averageBoardCloneMs: average(metrics.map((metric) => metric.boardCloneMs)),
     averageSetupMs: average(metrics.map((metric) => metric.setupMs)),
     averageActionLoopMs: average(metrics.map((metric) => metric.actionLoopMs)),
     averageCleanupMs: average(metrics.map((metric) => metric.cleanupMs)),
@@ -145,6 +151,9 @@ export function formatStressProfileReport(summary: StressProfileSummary): string
     `Final turn marker: ${summary.finalTurn}`,
     `Max population: ${summary.maxPopulation}`,
     `Final population: ${summary.finalPopulation}`,
+    `Average cell clone ms/turn: ${summary.averageCellCloneMs.toFixed(3)}`,
+    `Average order sort ms/turn: ${summary.averageOrderSortMs.toFixed(3)}`,
+    `Average board clone ms/turn: ${summary.averageBoardCloneMs.toFixed(3)}`,
     `Average setup ms/turn: ${summary.averageSetupMs.toFixed(3)}`,
     `Average action loop ms/turn: ${summary.averageActionLoopMs.toFixed(3)}`,
     `Average cleanup ms/turn: ${summary.averageCleanupMs.toFixed(3)}`,
@@ -155,7 +164,7 @@ export function formatStressProfileReport(summary: StressProfileSummary): string
     'Slowest turns:',
     ...summary.slowestTurns.map(
       (metric) =>
-        `  turn ${metric.turn}: total=${metric.totalMs.toFixed(3)}ms sim=${metric.simulationMs.toFixed(3)}ms setup=${metric.setupMs.toFixed(3)}ms action=${metric.actionLoopMs.toFixed(3)}ms cleanup=${metric.cleanupMs.toFixed(3)}ms result=${metric.resultMs.toFixed(3)}ms serialize=${metric.serializationMs.toFixed(3)}ms cells ${metric.livingCellsBefore}->${metric.livingCellsAfter}`,
+        `  turn ${metric.turn}: total=${metric.totalMs.toFixed(3)}ms sim=${metric.simulationMs.toFixed(3)}ms setup=${metric.setupMs.toFixed(3)}ms clone=${metric.cellCloneMs.toFixed(3)}ms sort=${metric.orderSortMs.toFixed(3)}ms board=${metric.boardCloneMs.toFixed(3)}ms action=${metric.actionLoopMs.toFixed(3)}ms cleanup=${metric.cleanupMs.toFixed(3)}ms result=${metric.resultMs.toFixed(3)}ms serialize=${metric.serializationMs.toFixed(3)}ms cells ${metric.livingCellsBefore}->${metric.livingCellsAfter}`,
     ),
   ];
 

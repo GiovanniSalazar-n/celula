@@ -1,4 +1,4 @@
-import type { MatchStartPayload, SimulationState } from '../types';
+import type { MatchStartPayload, SimulationState, TickExecutionProfile } from '../types';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000/api';
 
@@ -47,13 +47,13 @@ export async function pauseMatch(): Promise<SimulationState> {
   return data.match;
 }
 
-export async function tickMatch(steps: number = 1): Promise<SimulationState> {
-  const data = await requestJson<{ match: SimulationState }>('/game/tick', {
+export async function tickMatch(steps: number = 1): Promise<{ match: SimulationState; profile: TickExecutionProfile | null }> {
+  const data = await requestJson<{ match: SimulationState; profile: TickExecutionProfile | null }>('/game/tick', {
     method: 'POST',
     body: JSON.stringify({ steps }),
   });
 
-  return data.match;
+  return data;
 }
 
 export async function endMatch(): Promise<SimulationState> {

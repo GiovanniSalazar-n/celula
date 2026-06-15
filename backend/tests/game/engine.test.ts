@@ -248,4 +248,29 @@ describe('engine', () => {
     expect(failureLog?.message).toContain('Alpha had');
     expect(failureLog?.message).toContain('blocked action');
   });
+
+  it('caps retained logs so long matches do not resend the full history', () => {
+    const config = makeMatchConfig(
+      `def action(cell, environment):
+    return "d"`,
+      `def action(cell, environment):
+    return "d"`,
+    );
+
+    const state = createSimulationState(config, {
+      startingCells: [
+        makeCell(config.teams[0], 'a', 1, 1),
+        makeCell(config.teams[1], 'b', 3, 3),
+      ],
+      logs: Array.from({ length: 300 }, (_, index) => ({
+        turn: index,
+        type: 'system' as const,
+        message: `log ${index}`,
+      })),
+    });
+
+    const next = runSimulationTurn(state);
+    expect(next.logs).toHaveLength(250);
+    expect(next.logs[0]?.message).toBe('log 50');
+  });
 });

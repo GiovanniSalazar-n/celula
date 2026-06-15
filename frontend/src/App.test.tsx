@@ -2,7 +2,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import App from './App';
-import type { SimulationState } from './types';
+import type { SimulationState, TickExecutionProfile } from './types';
 
 const mockValidation = vi.fn();
 const mockStartMatch = vi.fn();
@@ -93,6 +93,33 @@ function makeMatch(overrides: Partial<SimulationState> = {}): SimulationState {
   };
 }
 
+function makeTickProfile(overrides: Partial<TickExecutionProfile> = {}): TickExecutionProfile {
+  return {
+    requestedSteps: 25,
+    executedSteps: 25,
+    livingCellsBefore: 1200,
+    livingCellsAfter: 1240,
+    logsBefore: 20,
+    logsAfter: 22,
+    cellCloneMs: 2,
+    orderSortMs: 1,
+    boardCloneMs: 1,
+    setupMs: 4,
+    actionLoopMs: 18,
+    cleanupMs: 1,
+    resultMs: 1,
+    simulationMs: 24,
+    serializationMs: 2,
+    totalMs: 26,
+    payloadBytes: 262144,
+    ...overrides,
+  };
+}
+
+function makeTickResponse(match: SimulationState, profile: TickExecutionProfile | null = makeTickProfile()) {
+  return { match, profile };
+}
+
 async function validateBothPlayers() {
   const validateButtons = screen.getAllByRole('button', { name: /validate code/i });
   await userEvent.click(validateButtons[0]);
@@ -152,7 +179,7 @@ describe('App', () => {
     mockStartMatch.mockResolvedValue(makeMatch());
     mockPlayMatch.mockResolvedValue(makeMatch({ status: 'running' }));
     mockTickMatch.mockResolvedValue(
-      makeMatch({
+      makeTickResponse(makeMatch({
         status: 'finished',
         result: {
           winner: 1,
@@ -163,7 +190,7 @@ describe('App', () => {
             { id: 2, name: 'Beta', color: '#f43f5e', livingCells: 0, totalHealth: 0, averageVitality: 0 },
           ],
         },
-      }),
+      })),
     );
 
     render(<App />);
