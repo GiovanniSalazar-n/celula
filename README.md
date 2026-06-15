@@ -71,12 +71,15 @@ npm run profile:stress -- --turns 1000 --top 10
 
 ## Docker
 
-The dev container setup is intentionally kept simple and unchanged in behavior:
+Run the game in Docker:
 
 ```bash
-docker compose up -d
-docker compose exec dev bash
+docker compose up --build
 ```
+
+Then open [http://localhost:5173](http://localhost:5173).
+
+The backend is available at [http://localhost:3000](http://localhost:3000).
 
 ## Documentation
 

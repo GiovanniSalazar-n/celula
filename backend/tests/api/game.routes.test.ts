@@ -53,6 +53,8 @@ describe('game routes', () => {
     const ticked = await request(app).post('/api/game/tick').send({ steps: 2 });
     expect(ticked.status).toBe(200);
     expect(ticked.body.match.currentTurn).toBeGreaterThanOrEqual(3);
+    expect(ticked.body.profile.executedSteps).toBeGreaterThanOrEqual(1);
+    expect(ticked.body.profile.payloadBytes).toBeGreaterThan(0);
 
     const paused = await request(app).post('/api/game/pause').send({});
     expect(paused.status).toBe(200);

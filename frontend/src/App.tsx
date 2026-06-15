@@ -9,13 +9,13 @@ import { GameBoard } from './components/GameBoard';
 import { LogsPanel } from './components/LogsPanel';
 import { PlayerSidebar } from './components/SidebarStats';
 import { CODE_TEMPLATES } from './domain/templates';
-import type { GameState, PlayerConfigForm, Screen, SimulationSettings, SimulationState, SetupIssue } from './types';
+import type { GameState, PlayerConfigForm, Screen, SimulationSettings, SimulationState, SetupIssue, TickExecutionProfile } from './types';
 
 const DEFAULT_TURN_LIMIT = 5000;
 
 function getStepsPerTick(speed: SimulationSettings['speed']): number {
   if (speed === 5) {
-    return 10;
+    return 25;
   }
   if (speed === 2) {
     return 3;
@@ -77,6 +77,7 @@ export default function App() {
     turnDelay: 180,
   });
   const [matchState, setMatchState] = useState<SimulationState | null>(null);
+  const [lastTickProfile, setLastTickProfile] = useState<TickExecutionProfile | null>(null);
   const [startErrors, setStartErrors] = useState<SetupIssue[]>([]);
   const simTimerRef = useRef<number | null>(null);
   const tickInFlightRef = useRef(false);
@@ -84,7 +85,7 @@ export default function App() {
   useEffect(() => {
     let delay = 360;
     if (settings.speed === 2) delay = 180;
-    if (settings.speed === 5) delay = 60;
+    if (settings.speed === 5) delay = 120;
     setSettings((previous) => (previous.turnDelay === delay ? previous : { ...previous, turnDelay: delay }));
   }, [settings.speed]);
 
@@ -105,8 +106,9 @@ export default function App() {
       tickInFlightRef.current = true;
       try {
         const next = await tickMatch(getStepsPerTick(settings.speed));
-        setMatchState(next);
-        setGameState(next.result ? 'finished' : next.status);
+        setMatchState(next.match);
+        setLastTickProfile(next.profile);
+        setGameState(next.match.result ? 'finished' : next.match.status);
       } finally {
         tickInFlightRef.current = false;
       }
@@ -186,6 +188,7 @@ export default function App() {
       });
 
       setMatchState(state);
+      setLastTickProfile(null);
       setScreen('simulation');
       setGameState('paused');
     } catch (error) {
@@ -199,8 +202,9 @@ export default function App() {
     }
 
     const next = await tickMatch(1);
-    setMatchState(next);
-    setGameState(next.result ? 'finished' : 'paused');
+    setMatchState(next.match);
+    setLastTickProfile(next.profile);
+    setGameState(next.match.result ? 'finished' : 'paused');
   };
 
   const handleTogglePlay = async () => {
@@ -229,6 +233,7 @@ export default function App() {
       turnLimit: settings.maxTurns,
     });
     setMatchState(restarted);
+    setLastTickProfile(null);
     setScreen('simulation');
     setGameState('paused');
   };
@@ -242,6 +247,7 @@ export default function App() {
       turnLimit: settings.maxTurns,
     });
     setMatchState(restarted);
+    setLastTickProfile(null);
     setScreen('simulation');
     setGameState('paused');
   };
@@ -255,6 +261,7 @@ export default function App() {
     setGameState('setup');
     setScreen('setup');
     setMatchState(null);
+    setLastTickProfile(null);
   };
 
   const handleEndMatch = async () => {
@@ -325,6 +332,7 @@ export default function App() {
               currentTurn={matchState.currentTurn}
               gameState={gameState}
               settings={settings}
+              lastTickProfile={lastTickProfile}
               setSettings={setSettings}
               onTogglePlay={() => {
                 void handleTogglePlay();

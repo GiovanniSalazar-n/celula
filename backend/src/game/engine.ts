@@ -20,6 +20,8 @@ import type {
   TurnLog,
 } from './types.js';
 
+const MAX_RETAINED_LOGS = 250;
+
 interface CreateSimulationOptions {
   rng?: () => number;
   startingCells?: Cell[];
@@ -268,7 +270,7 @@ function runSimulationTurnInternal(
 
   const resultStartedAt = captureProfile ? performance.now() : 0;
   const result = evaluateResult(state.config.teams, livingCells, turn, state.config.turnLimit);
-  const updatedLogs = [...state.logs, ...logs];
+  const updatedLogs = appendLogs(state.logs, logs);
 
   if (result) {
     updatedLogs.push({
@@ -356,7 +358,7 @@ export function endSimulationEarly(state: SimulationState): SimulationState {
     status: 'finished',
     result,
     logs: [
-      ...state.logs,
+      ...state.logs.slice(-(MAX_RETAINED_LOGS - 1)),
       {
         turn: state.currentTurn,
         type: 'result',
@@ -548,4 +550,13 @@ function recordActionFailure(
     reason,
     count: 1,
   });
+}
+
+function appendLogs(existingLogs: TurnLog[], nextLogs: TurnLog[]): TurnLog[] {
+  if (nextLogs.length === 0) {
+    return existingLogs.length <= MAX_RETAINED_LOGS ? existingLogs : existingLogs.slice(-MAX_RETAINED_LOGS);
+  }
+
+  const combined = [...existingLogs, ...nextLogs];
+  return combined.length <= MAX_RETAINED_LOGS ? combined : combined.slice(-MAX_RETAINED_LOGS);
 }

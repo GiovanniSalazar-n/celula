@@ -102,6 +102,23 @@ export interface SimulationState {
   result: GameResult | null;
 }
 
+export interface TickExecutionProfile {
+  requestedSteps: number;
+  executedSteps: number;
+  livingCellsBefore: number;
+  livingCellsAfter: number;
+  logsBefore: number;
+  logsAfter: number;
+  setupMs: number;
+  actionLoopMs: number;
+  cleanupMs: number;
+  resultMs: number;
+  simulationMs: number;
+  serializationMs: number;
+  totalMs: number;
+  payloadBytes: number;
+}
+
 export interface MatchStartPayload {
   players: [
     { name: string; color: string; code: string },

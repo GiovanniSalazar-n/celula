@@ -1,11 +1,12 @@
 import React from 'react';
 import { Play, Pause, SkipForward, RotateCcw, Sliders, Square } from 'lucide-react';
-import type { GameState, SimulationSettings } from '../types';
+import type { GameState, SimulationSettings, TickExecutionProfile } from '../types';
 
 interface ControlBarProps {
   currentTurn: number;
   gameState: GameState;
   settings: SimulationSettings;
+  lastTickProfile: TickExecutionProfile | null;
   setSettings: React.Dispatch<React.SetStateAction<SimulationSettings>>;
   onTogglePlay: () => void;
   onNextStep: () => void;
@@ -17,6 +18,7 @@ export const ControlBar: React.FC<ControlBarProps> = ({
   currentTurn,
   gameState,
   settings,
+  lastTickProfile,
   setSettings,
   onTogglePlay,
   onNextStep,
@@ -113,6 +115,27 @@ export const ControlBar: React.FC<ControlBarProps> = ({
           <span>END MATCH</span>
         </button>
       </div>
+
+      {lastTickProfile && (
+        <div className="flex items-center gap-3 font-mono text-[10px] text-slate-400 border-l border-slate-800 pl-4">
+          <div>
+            <span className="text-slate-500 block">LAST TICK</span>
+            <span className="text-cyan-300 font-bold">{lastTickProfile.totalMs.toFixed(1)}ms</span>
+          </div>
+          <div>
+            <span className="text-slate-500 block">BATCH</span>
+            <span>{lastTickProfile.executedSteps}/{lastTickProfile.requestedSteps}</span>
+          </div>
+          <div>
+            <span className="text-slate-500 block">CELLS</span>
+            <span>{lastTickProfile.livingCellsAfter.toLocaleString()}</span>
+          </div>
+          <div>
+            <span className="text-slate-500 block">PAYLOAD</span>
+            <span>{Math.round(lastTickProfile.payloadBytes / 1024).toLocaleString()} KB</span>
+          </div>
+        </div>
+      )}
 
       {/* 3. Speed selection presets */}
       <div className="flex items-center gap-3 font-mono text-xs">

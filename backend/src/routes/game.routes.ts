@@ -1,6 +1,7 @@
 import { Router } from 'express';
-import { advanceSimulation, endSimulationEarly, serializeMatchState, startMatch } from '../game/engine.js';
-import type { MatchStartInput, SimulationState } from '../game/types.js';
+import { performance } from 'node:perf_hooks';
+import { endSimulationEarly, runSimulationTurnProfiled, serializeMatchState, startMatch } from '../game/engine.js';
+import type { MatchStartInput, SimulationState, TickExecutionProfile, TurnExecutionProfile } from '../game/types.js';
 
 let activeMatch: SimulationState | null = null;
 
@@ -67,16 +68,30 @@ gameRouter.post('/tick', (req, res) => {
     return res.status(404).json({ error: 'No active match.' });
   }
 
+  let profile: TickExecutionProfile | null = null;
+
   if (!activeMatch.result) {
     const requestedSteps = typeof req.body?.steps === 'number' ? req.body.steps : 1;
-    const nextState = advanceSimulation(activeMatch, requestedSteps);
+    const profiled = advanceSimulationWithProfile(activeMatch, requestedSteps);
+    const nextState = profiled.nextState;
     activeMatch = {
       ...nextState,
       status: nextState.result ? 'finished' : activeMatch.status,
     };
+    profile = profiled.profile;
   }
 
-  return res.json({ match: serializeMatchState(activeMatch) });
+  const serializationStartedAt = performance.now();
+  const match = serializeMatchState(activeMatch);
+  const serializationMs = performance.now() - serializationStartedAt;
+
+  if (profile) {
+    profile.serializationMs = serializationMs;
+    profile.payloadBytes = Buffer.byteLength(JSON.stringify({ match, profile }), 'utf8');
+    profile.totalMs = profile.simulationMs + profile.serializationMs;
+  }
+
+  return res.json({ match, profile });
 });
 
 gameRouter.post('/end', (_req, res) => {
@@ -92,3 +107,57 @@ gameRouter.post('/reset', (_req, res) => {
   activeMatch = null;
   return res.json({ match: null });
 });
+
+function advanceSimulationWithProfile(
+  state: SimulationState,
+  steps: number = 1,
+): { nextState: SimulationState; profile: TickExecutionProfile } {
+  let nextState = state;
+  const safeSteps = Number.isFinite(steps) ? Math.max(1, Math.floor(steps)) : 1;
+  const profileTotals: TurnExecutionProfile = {
+    setupMs: 0,
+    actionLoopMs: 0,
+    cleanupMs: 0,
+    resultMs: 0,
+    totalMs: 0,
+  };
+  let executedSteps = 0;
+
+  const livingCellsBefore = state.cells.length;
+  const logsBefore = state.logs.length;
+
+  for (let index = 0; index < safeSteps; index += 1) {
+    const profiledTurn = runSimulationTurnProfiled(nextState);
+    nextState = profiledTurn.nextState;
+    executedSteps += 1;
+    profileTotals.setupMs += profiledTurn.profile.setupMs;
+    profileTotals.actionLoopMs += profiledTurn.profile.actionLoopMs;
+    profileTotals.cleanupMs += profiledTurn.profile.cleanupMs;
+    profileTotals.resultMs += profiledTurn.profile.resultMs;
+    profileTotals.totalMs += profiledTurn.profile.totalMs;
+
+    if (nextState.result) {
+      break;
+    }
+  }
+
+  return {
+    nextState,
+    profile: {
+      requestedSteps: safeSteps,
+      executedSteps,
+      livingCellsBefore,
+      livingCellsAfter: nextState.cells.length,
+      logsBefore,
+      logsAfter: nextState.logs.length,
+      setupMs: profileTotals.setupMs,
+      actionLoopMs: profileTotals.actionLoopMs,
+      cleanupMs: profileTotals.cleanupMs,
+      resultMs: profileTotals.resultMs,
+      simulationMs: profileTotals.totalMs,
+      serializationMs: 0,
+      totalMs: profileTotals.totalMs,
+      payloadBytes: 0,
+    },
+  };
+}
