@@ -6,6 +6,7 @@ Battle of Cells is a local two-player simulation where each player programs a sa
 
 * Frontend: React + Vite + TypeScript
 * Backend: Node.js + Express + TypeScript
+* Experimental engine runtime: Rust + WebAssembly
 * Tests: Vitest, React Testing Library, Supertest
 
 ## Install
@@ -13,6 +14,8 @@ Battle of Cells is a local two-player simulation where each player programs a sa
 ```bash
 npm install
 ```
+
+For a new device, install the toolchain listed in [REQUIREMENTS.md](REQUIREMENTS.md). The Rust/WASM runtime needs Rust, the `wasm32-unknown-unknown` target, and `wasm-pack`.
 
 ## Run
 
@@ -34,6 +37,14 @@ Or run both together:
 npm run dev
 ```
 
+Run with experimental Rust/WASM turn advancement:
+
+```bash
+npm run dev:wasm
+```
+
+In this mode, the backend delegates strategy validation, match creation, turn advancement, and manual match ending to Rust/WASM.
+
 Frontend URL: [http://localhost:5173](http://localhost:5173)  
 Backend URL: [http://localhost:3000](http://localhost:3000)
 
@@ -43,6 +54,12 @@ All tests:
 
 ```bash
 npm test
+```
+
+Build Rust/WASM only:
+
+```bash
+npm run build:wasm
 ```
 
 Backend only:
@@ -71,13 +88,15 @@ npm run profile:stress -- --turns 1000 --top 10
 
 ## Docker
 
-The dev container setup is intentionally kept simple and unchanged in behavior:
+The dev container installs Node, Rust, the WASM target, and `wasm-pack`:
 
 ```bash
-docker compose up -d
+docker compose up -d --build
 docker compose exec dev bash
+npm install
+npm run dev:wasm
 ```
 
 ## Documentation
 
-See the [docs](docs) directory for the specification, architecture, API, test plan, roadmap, flow, decisions, and profiling notes.
+See [REQUIREMENTS.md](REQUIREMENTS.md) and the [docs](docs) directory for the specification, architecture, API, test plan, roadmap, flow, decisions, profiling notes, and Rust/WASM engine migration guide.

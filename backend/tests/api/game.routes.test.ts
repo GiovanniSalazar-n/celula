@@ -4,6 +4,7 @@ import { resetActiveMatchForTests } from '../../src/routes/game.routes.js';
 import { createApp } from '../../src/server.js';
 
 const app = createApp();
+const originalEngineRuntime = process.env.ENGINE_RUNTIME;
 
 function validPlayer(name: string, color: string) {
   return {
@@ -16,6 +17,7 @@ function validPlayer(name: string, color: string) {
 
 afterEach(() => {
   resetActiveMatchForTests();
+  process.env.ENGINE_RUNTIME = originalEngineRuntime;
 });
 
 describe('game routes', () => {
@@ -72,5 +74,28 @@ describe('game routes', () => {
     const reset = await request(app).post('/api/game/reset').send({});
     expect(reset.status).toBe(200);
     expect(reset.body.match).toBeNull();
+  });
+
+  it('can start, advance, and end a match through the Rust/WASM runtime when enabled', async () => {
+    process.env.ENGINE_RUNTIME = 'wasm';
+
+    const started = await request(app).post('/api/game/start').send({
+      players: [validPlayer('Alpha', '#22d3ee'), validPlayer('Beta', '#f43f5e')],
+      turnLimit: 5,
+    });
+
+    expect(started.status).toBe(200);
+    expect(started.body.match.config.teams[0].validation.program.body[0].type).toBe('return');
+
+    const ticked = await request(app).post('/api/game/tick').send({ steps: 2 });
+
+    expect(ticked.status).toBe(200);
+    expect(ticked.body.match.currentTurn).toBeGreaterThanOrEqual(3);
+    expect(ticked.body.match.cells).toHaveLength(2);
+
+    const ended = await request(app).post('/api/game/end').send({});
+    expect(ended.status).toBe(200);
+    expect(ended.body.match.status).toBe('finished');
+    expect(ended.body.match.result.reason).toBe('manual_stop');
   });
 });

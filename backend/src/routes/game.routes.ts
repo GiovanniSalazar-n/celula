@@ -1,5 +1,6 @@
 import { Router } from 'express';
-import { advanceSimulation, endSimulationEarly, serializeMatchState, startMatch } from '../game/engine.js';
+import { serializeMatchState } from '../game/engine.js';
+import { advanceSimulationWithRuntime, endSimulationEarlyWithRuntime, startMatchWithRuntime } from '../game/engineRuntime.js';
 import type { MatchStartInput, SimulationState } from '../game/types.js';
 
 let activeMatch: SimulationState | null = null;
@@ -16,9 +17,9 @@ gameRouter.get('/state', (_req, res) => {
   });
 });
 
-gameRouter.post('/start', (req, res) => {
+gameRouter.post('/start', async (req, res) => {
   const input = req.body as MatchStartInput;
-  const { match, errors } = startMatch(input);
+  const { match, errors } = await startMatchWithRuntime(input);
 
   if (!match) {
     return res.status(400).json({
@@ -62,14 +63,14 @@ gameRouter.post('/pause', (_req, res) => {
   return res.json({ match: serializeMatchState(activeMatch) });
 });
 
-gameRouter.post('/tick', (req, res) => {
+gameRouter.post('/tick', async (req, res) => {
   if (!activeMatch) {
     return res.status(404).json({ error: 'No active match.' });
   }
 
   if (!activeMatch.result) {
     const requestedSteps = typeof req.body?.steps === 'number' ? req.body.steps : 1;
-    const nextState = advanceSimulation(activeMatch, requestedSteps);
+    const nextState = await advanceSimulationWithRuntime(activeMatch, requestedSteps);
     activeMatch = {
       ...nextState,
       status: nextState.result ? 'finished' : activeMatch.status,
@@ -79,12 +80,12 @@ gameRouter.post('/tick', (req, res) => {
   return res.json({ match: serializeMatchState(activeMatch) });
 });
 
-gameRouter.post('/end', (_req, res) => {
+gameRouter.post('/end', async (_req, res) => {
   if (!activeMatch) {
     return res.status(404).json({ error: 'No active match.' });
   }
 
-  activeMatch = endSimulationEarly(activeMatch);
+  activeMatch = await endSimulationEarlyWithRuntime(activeMatch);
   return res.json({ match: serializeMatchState(activeMatch) });
 });
 

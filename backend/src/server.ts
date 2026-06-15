@@ -2,6 +2,7 @@ import cors from 'cors';
 import express from 'express';
 import { gameRouter } from './routes/game.routes.js';
 import { validationRouter } from './routes/validation.routes.js';
+import { getEngineRuntimeInfo } from './game/engineRuntime.js';
 
 export function createApp() {
   const app = express();
@@ -10,7 +11,7 @@ export function createApp() {
   app.use(express.json());
 
   app.get('/health', (_req, res) => {
-    res.json({ ok: true });
+    res.json({ ok: true, engineRuntime: getEngineRuntimeInfo() });
   });
 
   app.use('/api/validation', validationRouter);

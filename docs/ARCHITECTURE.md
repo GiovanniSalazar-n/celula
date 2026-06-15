@@ -16,10 +16,10 @@ frontend (React + Vite)
   -> starts and controls the active match
   -> renders configuration, simulation, and final result screens
 
-backend (Express + pure TypeScript engine)
+backend (Express + TypeScript API)
   -> validates the Python-like strategy subset
   -> stores one active match in memory
-  -> advances the simulation one turn at a time
+  -> advances the simulation through TypeScript or Rust/WASM runtime
   -> returns serializable state to the frontend
 ```
 
@@ -38,6 +38,7 @@ backend/
       scoring.ts
       types.ts
       validation.ts
+      engineRuntime.ts
     routes/
       game.routes.ts
       validation.routes.ts
@@ -66,6 +67,11 @@ docs/
   ROADMAP.md
   FLOW.md
   DECISIONS.md
+
+engine-wasm/
+  Cargo.toml
+  src/
+    lib.rs
 ```
 
 ## Backend Responsibilities
@@ -81,7 +87,21 @@ docs/
 * `validation.ts`: safe parser and interpreter for the Python-like strategy subset.
 * `scoring.ts`: team summaries and final result resolution.
 * `engine.ts`: match creation and turn advancement orchestration.
+* `engineRuntime.ts`: feature-flagged runtime switch. Uses TypeScript by default and Rust/WASM when `ENGINE_RUNTIME=wasm`.
 * `profile/stressProfile.ts`: repeatable timing and population profiling for the aggressive reproduction stress strategy.
+
+### Rust/WASM Engine
+
+The `engine-wasm` crate exposes validation, match creation, turn advancement, and manual end scoring through `wasm-pack`.
+
+The backend sends JSON payloads to the WASM module and receives the same frontend-facing JSON shapes back. This keeps the frontend unchanged while the engine migration moves forward.
+
+The current Rust path is intentionally feature-flagged. It mirrors the rules in TypeScript and is activated with:
+
+```powershell
+$env:ENGINE_RUNTIME="wasm"
+npm run dev
+```
 
 ### API Layer
 
@@ -117,12 +137,13 @@ The latest optimization pass showed that direct indexed occupancy lookups and or
 
 1. User edits player configurations in the frontend.
 2. Frontend sends code to `/api/validation/player-function`.
-3. Frontend enables confirmation only for valid strategies.
-4. Frontend sends both players to `/api/game/start`.
-5. Backend validates both strategies again, creates the locked match, and returns a paused initial state.
-6. Frontend calls `/api/game/play` and then polls `/api/game/tick` while running.
-7. Frontend calls `/api/game/pause` to stop automatic advancement.
-8. Frontend calls `/api/game/reset` when returning to configuration.
+3. Backend validates/parses through the selected runtime.
+4. Frontend enables confirmation only for valid strategies.
+5. Frontend sends both players to `/api/game/start`.
+6. Backend validates both strategies again, creates the locked match through the selected runtime, and returns a paused initial state.
+7. Frontend calls `/api/game/play` and then polls `/api/game/tick` while running.
+8. Backend advances `/api/game/tick` through the selected engine runtime.
+9. Frontend calls `/api/game/reset` when returning to configuration.
 
 ## Why Rules Stay Outside React
 

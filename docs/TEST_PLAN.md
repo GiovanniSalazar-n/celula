@@ -99,6 +99,13 @@ Rest:
 * stress profile collects turn-by-turn timing metrics,
 * stress profile report is readable from the CLI output.
 
+### Rust/WASM Engine
+
+* Rust unit tests cover validation, reproduction, and elimination behavior,
+* backend API tests verify `/api/validation/player-function` parses through `ENGINE_RUNTIME=wasm`,
+* backend API tests verify `/api/game/start`, `/api/game/tick`, and `/api/game/end` run through `ENGINE_RUNTIME=wasm`,
+* production build compiles the WASM package before the backend and frontend builds.
+
 ## Backend API Tests
 
 * validate player function,
@@ -133,10 +140,13 @@ Before sign-off:
 
 1. run backend tests,
 2. run frontend tests,
-3. run the stress profile command for the aggressive reproduction strategy,
-4. start backend and frontend locally,
-5. validate both sample strategies,
-6. start a match,
-7. play, pause, single-step, and end a match early,
-8. confirm final result screen,
-9. return to configuration and start again.
+3. run Rust/WASM tests,
+4. run the stress profile command for the aggressive reproduction strategy,
+5. start backend and frontend locally,
+6. start the app with `npm run dev:wasm`,
+7. confirm `/health` reports `engineRuntime.mode` as `wasm`,
+8. validate both sample strategies,
+9. start a match,
+10. play, pause, single-step, and end a match early,
+11. confirm final result screen,
+12. return to configuration and start again.

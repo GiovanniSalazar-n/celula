@@ -7,16 +7,21 @@
     "backend"
   ],
   "scripts": {
+    "build:wasm": "wasm-pack build engine-wasm --target nodejs --out-dir pkg",
+    "test:wasm": "cargo test --manifest-path engine-wasm/Cargo.toml",
     "dev": "concurrently \"npm run dev --workspace backend\" \"npm run dev --workspace frontend\"",
+    "dev:wasm": "npm run build:wasm && concurrently \"npm run dev:backend:wasm\" \"npm run dev:frontend\"",
     "dev:backend": "npm run dev --workspace backend",
+    "dev:backend:wasm": "cross-env ENGINE_RUNTIME=wasm npm run dev --workspace backend",
     "dev:frontend": "npm run dev --workspace frontend",
-    "build": "npm run build --workspace backend && npm run build --workspace frontend",
+    "build": "npm run build:wasm && npm run build --workspace backend && npm run build --workspace frontend",
     "profile:stress": "npm run profile:stress --workspace backend --",
-    "test": "npm run test --workspace backend && npm run test --workspace frontend",
+    "test": "npm run test:wasm && npm run test --workspace backend && npm run test --workspace frontend",
     "test:backend": "npm run test --workspace backend",
     "test:frontend": "npm run test --workspace frontend"
   },
   "devDependencies": {
-    "concurrently": "^9.0.1"
+    "concurrently": "^9.0.1",
+    "cross-env": "^10.1.0"
   }
 }
