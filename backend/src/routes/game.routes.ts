@@ -115,6 +115,9 @@ function advanceSimulationWithProfile(
   let nextState = state;
   const safeSteps = Number.isFinite(steps) ? Math.max(1, Math.floor(steps)) : 1;
   const profileTotals: TurnExecutionProfile = {
+    cellCloneMs: 0,
+    orderSortMs: 0,
+    boardCloneMs: 0,
     setupMs: 0,
     actionLoopMs: 0,
     cleanupMs: 0,
@@ -130,6 +133,9 @@ function advanceSimulationWithProfile(
     const profiledTurn = runSimulationTurnProfiled(nextState);
     nextState = profiledTurn.nextState;
     executedSteps += 1;
+    profileTotals.cellCloneMs += profiledTurn.profile.cellCloneMs;
+    profileTotals.orderSortMs += profiledTurn.profile.orderSortMs;
+    profileTotals.boardCloneMs += profiledTurn.profile.boardCloneMs;
     profileTotals.setupMs += profiledTurn.profile.setupMs;
     profileTotals.actionLoopMs += profiledTurn.profile.actionLoopMs;
     profileTotals.cleanupMs += profiledTurn.profile.cleanupMs;
@@ -150,6 +156,9 @@ function advanceSimulationWithProfile(
       livingCellsAfter: nextState.cells.length,
       logsBefore,
       logsAfter: nextState.logs.length,
+      cellCloneMs: profileTotals.cellCloneMs,
+      orderSortMs: profileTotals.orderSortMs,
+      boardCloneMs: profileTotals.boardCloneMs,
       setupMs: profileTotals.setupMs,
       actionLoopMs: profileTotals.actionLoopMs,
       cleanupMs: profileTotals.cleanupMs,

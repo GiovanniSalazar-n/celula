@@ -15,12 +15,36 @@ import type {
   SimulationState,
   StrategyCellContext,
   StrategyEnvironmentContext,
+  StrategyProgram,
   TeamId,
   TurnExecutionProfile,
   TurnLog,
 } from './types.js';
 
 const MAX_RETAINED_LOGS = 250;
+
+interface NeighborOffset {
+  direction: Direction;
+  rowDelta: number;
+  colDelta: number;
+  north: boolean;
+  south: boolean;
+  east: boolean;
+  west: boolean;
+}
+
+const NEIGHBOR_OFFSETS: NeighborOffset[] = DIRECTIONS.map((direction) => {
+  const [rowDelta, colDelta] = DIRECTION_DELTAS[direction];
+  return {
+    direction,
+    rowDelta,
+    colDelta,
+    north: direction === 'nw' || direction === 'n' || direction === 'ne',
+    south: direction === 'sw' || direction === 's' || direction === 'se',
+    east: direction === 'ne' || direction === 'e' || direction === 'se',
+    west: direction === 'nw' || direction === 'w' || direction === 'sw',
+  };
+});
 
 interface CreateSimulationOptions {
   rng?: () => number;
@@ -128,6 +152,9 @@ function runSimulationTurnInternal(
     return {
       nextState,
       profile: {
+        cellCloneMs: 0,
+        orderSortMs: 0,
+        boardCloneMs: 0,
         setupMs: 0,
         actionLoopMs: 0,
         cleanupMs: 0,
@@ -139,13 +166,26 @@ function runSimulationTurnInternal(
 
   const setupStartedAt = captureProfile ? performance.now() : 0;
   const turn = state.currentTurn;
-  const { cells, cellsById, orderedCells, teamHealthById } = cloneCellsForTurn(state.cells);
+  const { cells, cellsById, orderedCells, teamHealthByTeamId, cellCloneMs, orderSortMs } = cloneCellsForTurn(
+    state.cells,
+    captureProfile,
+  );
+  const boardCloneStartedAt = captureProfile ? performance.now() : 0;
   const board = cloneBoard(state.board);
+  const boardCloneMs = captureProfile ? performance.now() - boardCloneStartedAt : 0;
   const [teamOne, teamTwo] = state.config.teams;
   const programOne = getValidatedProgram(teamOne);
   const programTwo = getValidatedProgram(teamTwo);
   const logs: TurnLog[] = [];
   const aggregatedActionFailures = new Map<string, AggregatedActionFailure>();
+  const strategyCell: StrategyCellContext = {
+    health: 0,
+    age: 0,
+    row: 0,
+    col: 0,
+  };
+  const environment = createReusableEnvironmentContext(state);
+  const actionState = { board, cells, currentTurn: turn };
   let nextCellId = state.nextCellId;
   const setupMs = captureProfile ? performance.now() - setupStartedAt : 0;
 
@@ -155,10 +195,9 @@ function runSimulationTurnInternal(
       continue;
     }
 
-    const player = cell.teamId === teamOne.id ? teamOne : teamTwo;
     const program = cell.teamId === teamOne.id ? programOne : programTwo;
 
-    if (!player || !program) {
+    if (!program) {
       cell.lastAction = 'invalid';
       cell.lastActionStatus = 'invalid';
       logs.push({
@@ -171,22 +210,21 @@ function runSimulationTurnInternal(
       continue;
     }
 
-    const environment = buildEnvironmentContext(
+    fillEnvironmentContext(
+      environment,
       state,
       board,
       cellsById,
       cell,
-      teamHealthById.get(cell.teamId) ?? 0,
+      teamHealthByTeamId[cell.teamId],
     );
-    const strategyCell: StrategyCellContext = {
-      health: cell.health,
-      age: cell.age,
-      row: cell.position.row,
-      col: cell.position.col,
-    };
-    const execution = executeStrategy(program, strategyCell, environment);
+    strategyCell.health = cell.health;
+    strategyCell.age = cell.age;
+    strategyCell.row = cell.position.row;
+    strategyCell.col = cell.position.col;
+    const execution = executeProgramAction(program, strategyCell, environment);
 
-    if (execution.error || !execution.action) {
+    if (!execution) {
       cell.lastAction = 'invalid';
       cell.lastActionStatus = 'error';
       logs.push({
@@ -199,14 +237,14 @@ function runSimulationTurnInternal(
       continue;
     }
 
-    const parsedAction = parseActionCode(execution.action);
+    const parsedAction = parseActionCode(execution);
     if (!parsedAction) {
-      cell.lastAction = execution.action;
+      cell.lastAction = execution;
       cell.lastActionStatus = 'invalid';
       logs.push({
         turn,
         type: 'error',
-        message: `${cell.teamName} returned "${execution.action}", which is not a valid action code.`,
+        message: `${cell.teamName} returned "${execution}", which is not a valid action code.`,
         teamId: cell.teamId,
         cellId: cell.id,
       });
@@ -221,7 +259,7 @@ function runSimulationTurnInternal(
         : null;
     const targetHealthBefore = targetCellBefore?.health ?? 0;
 
-    const failureReason = resolveAction({ board, cells, currentTurn: turn }, cellsById, cell, parsedAction, () => {
+    const failureReason = resolveAction(actionState, cellsById, cell, parsedAction, () => {
       const childId = `cell-${nextCellId}`;
       nextCellId += 1;
       return childId;
@@ -232,14 +270,11 @@ function runSimulationTurnInternal(
     }
 
     if (parsedAction.kind === 'rest') {
-      teamHealthById.set(cell.teamId, (teamHealthById.get(cell.teamId) ?? 0) + (cell.health - actingHealthBefore));
+      teamHealthByTeamId[cell.teamId] += cell.health - actingHealthBefore;
     }
 
     if (targetCellBefore) {
-      teamHealthById.set(
-        targetCellBefore.teamId,
-        (teamHealthById.get(targetCellBefore.teamId) ?? 0) + (targetCellBefore.health - targetHealthBefore),
-      );
+      teamHealthByTeamId[targetCellBefore.teamId] += targetCellBefore.health - targetHealthBefore;
     }
   }
 
@@ -297,6 +332,9 @@ function runSimulationTurnInternal(
     return {
       nextState,
       profile: {
+        cellCloneMs,
+        orderSortMs,
+        boardCloneMs,
         setupMs,
         actionLoopMs,
         cleanupMs,
@@ -320,6 +358,9 @@ function runSimulationTurnInternal(
   return {
     nextState,
     profile: {
+      cellCloneMs,
+      orderSortMs,
+      boardCloneMs,
       setupMs,
       actionLoopMs,
       cleanupMs,
@@ -380,14 +421,8 @@ export function serializeMatchState(state: SimulationState): SerializedSimulatio
   };
 }
 
-function buildEnvironmentContext(
-  state: SimulationState,
-  board: SimulationState['board'],
-  cellsById: Map<string, Cell>,
-  cell: Cell,
-  teamHealth: number,
-): StrategyEnvironmentContext {
-  const neighbors = {
+function createReusableEnvironmentContext(state: SimulationState): StrategyEnvironmentContext {
+  return {
     n: 'outside',
     s: 'outside',
     e: 'outside',
@@ -396,7 +431,43 @@ function buildEnvironmentContext(
     nw: 'outside',
     se: 'outside',
     sw: 'outside',
-  } as Record<Direction, StrategyEnvironmentContext['n']>;
+    team_health: 0,
+    turn: state.currentTurn,
+    rows: state.config.boardRows,
+    cols: state.config.boardCols,
+    has_adjacent_ally: false,
+    has_adjacent_enemy: false,
+    enemy_count: 0,
+    occupied_count: 0,
+    empty_count: 0,
+    first_enemy_direction: 'none',
+    north_occupied_count: 0,
+    south_occupied_count: 0,
+    east_occupied_count: 0,
+    west_occupied_count: 0,
+  };
+}
+
+function fillEnvironmentContext(
+  environment: StrategyEnvironmentContext,
+  state: SimulationState,
+  board: SimulationState['board'],
+  cellsById: Map<string, Cell>,
+  cell: Cell,
+  teamHealth: number,
+): void {
+  environment.n = 'outside';
+  environment.s = 'outside';
+  environment.e = 'outside';
+  environment.w = 'outside';
+  environment.ne = 'outside';
+  environment.nw = 'outside';
+  environment.se = 'outside';
+  environment.sw = 'outside';
+  environment.team_health = teamHealth;
+  environment.turn = state.currentTurn;
+  environment.rows = state.config.boardRows;
+  environment.cols = state.config.boardCols;
   let hasAdjacentAlly = false;
   let hasAdjacentEnemy = false;
   let enemyCount = 0;
@@ -408,10 +479,9 @@ function buildEnvironmentContext(
   let eastOccupiedCount = 0;
   let westOccupiedCount = 0;
 
-  for (const direction of DIRECTIONS) {
-    const [rowDelta, colDelta] = DIRECTION_DELTAS[direction];
-    const targetRow = cell.position.row + rowDelta;
-    const targetCol = cell.position.col + colDelta;
+  for (const offset of NEIGHBOR_OFFSETS) {
+    const targetRow = cell.position.row + offset.rowDelta;
+    const targetCol = cell.position.col + offset.colDelta;
     let neighbor: StrategyEnvironmentContext['n'] = 'outside';
 
     if (targetRow >= 0 && targetRow < board.rows && targetCol >= 0 && targetCol < board.cols) {
@@ -425,7 +495,7 @@ function buildEnvironmentContext(
       }
     }
 
-    neighbors[direction] = neighbor;
+    environment[offset.direction] = neighbor;
 
     if (neighbor === 'allied') {
       hasAdjacentAlly = true;
@@ -435,86 +505,110 @@ function buildEnvironmentContext(
       enemyCount += 1;
       occupiedCount += 1;
       if (firstEnemyDirection === 'none') {
-        firstEnemyDirection = direction;
+        firstEnemyDirection = offset.direction;
       }
     } else if (neighbor === 'empty') {
       emptyCount += 1;
     }
 
     if (neighbor !== 'empty' && neighbor !== 'outside') {
-      if (direction === 'nw' || direction === 'n' || direction === 'ne') {
+      if (offset.north) {
         northOccupiedCount += 1;
       }
-      if (direction === 'sw' || direction === 's' || direction === 'se') {
+      if (offset.south) {
         southOccupiedCount += 1;
       }
-      if (direction === 'ne' || direction === 'e' || direction === 'se') {
+      if (offset.east) {
         eastOccupiedCount += 1;
       }
-      if (direction === 'nw' || direction === 'w' || direction === 'sw') {
+      if (offset.west) {
         westOccupiedCount += 1;
       }
     }
   }
 
-  return {
-    ...neighbors,
-    team_health: teamHealth,
-    turn: state.currentTurn,
-    rows: state.config.boardRows,
-    cols: state.config.boardCols,
-    has_adjacent_ally: hasAdjacentAlly,
-    has_adjacent_enemy: hasAdjacentEnemy,
-    enemy_count: enemyCount,
-    occupied_count: occupiedCount,
-    empty_count: emptyCount,
-    first_enemy_direction: firstEnemyDirection,
-    north_occupied_count: northOccupiedCount,
-    south_occupied_count: southOccupiedCount,
-    east_occupied_count: eastOccupiedCount,
-    west_occupied_count: westOccupiedCount,
-  };
+  environment.has_adjacent_ally = hasAdjacentAlly;
+  environment.has_adjacent_enemy = hasAdjacentEnemy;
+  environment.enemy_count = enemyCount;
+  environment.occupied_count = occupiedCount;
+  environment.empty_count = emptyCount;
+  environment.first_enemy_direction = firstEnemyDirection;
+  environment.north_occupied_count = northOccupiedCount;
+  environment.south_occupied_count = southOccupiedCount;
+  environment.east_occupied_count = eastOccupiedCount;
+  environment.west_occupied_count = westOccupiedCount;
+}
+
+function executeProgramAction(
+  program: StrategyProgram,
+  cell: StrategyCellContext,
+  environment: StrategyEnvironmentContext,
+): string | null {
+  try {
+    return program.executor ? program.executor(cell, environment) : executeStrategy(program, cell, environment).action;
+  } catch {
+    return null;
+  }
 }
 
 function cloneCell(cell: Cell): Cell {
   return {
-    ...cell,
-    position: { ...cell.position },
+    id: cell.id,
+    teamId: cell.teamId,
+    teamName: cell.teamName,
+    teamColor: cell.teamColor,
+    position: {
+      row: cell.position.row,
+      col: cell.position.col,
+    },
+    health: cell.health,
+    age: cell.age,
+    alive: cell.alive,
+    creationTurn: cell.creationTurn,
+    createdDuringCurrentTurn: cell.createdDuringCurrentTurn,
+    lastAction: cell.lastAction,
+    lastActionStatus: cell.lastActionStatus,
   };
 }
 
-function cloneCellsForTurn(cells: Cell[]): {
+function cloneCellsForTurn(cells: Cell[], captureProfile: boolean = false): {
   cells: Cell[];
   cellsById: Map<string, Cell>;
   orderedCells: Cell[];
-  teamHealthById: Map<TeamId, number>;
+  teamHealthByTeamId: [number, number, number];
+  cellCloneMs: number;
+  orderSortMs: number;
 } {
+  const cellCloneStartedAt = captureProfile ? performance.now() : 0;
   const clonedCells: Cell[] = new Array(cells.length);
   const cellsById = new Map<string, Cell>();
   const orderedCells: Cell[] = [];
-  const teamHealthById = new Map<TeamId, number>([
-    [1, 0],
-    [2, 0],
-  ]);
+  const teamHealthByTeamId: [number, number, number] = [0, 0, 0];
 
-  for (const cell of cells) {
+  for (let index = 0; index < cells.length; index += 1) {
+    const cell = cells[index];
     const clonedCell = cloneCell(cell);
-    clonedCells[cellsById.size] = clonedCell;
+    clonedCells[index] = clonedCell;
     cellsById.set(clonedCell.id, clonedCell);
 
     if (clonedCell.alive) {
       orderedCells.push(clonedCell);
-      teamHealthById.set(clonedCell.teamId, (teamHealthById.get(clonedCell.teamId) ?? 0) + clonedCell.health);
+      teamHealthByTeamId[clonedCell.teamId] += clonedCell.health;
     }
   }
+  const cellCloneMs = captureProfile ? performance.now() - cellCloneStartedAt : 0;
 
+  const orderSortStartedAt = captureProfile ? performance.now() : 0;
   orderedCells.sort(compareCellsForTurn);
+  const orderSortMs = captureProfile ? performance.now() - orderSortStartedAt : 0;
 
   return {
     cells: clonedCells,
     cellsById,
     orderedCells,
-    teamHealthById,
+    teamHealthByTeamId,
+    cellCloneMs,
+    orderSortMs,
   };
 }
 

@@ -115,6 +115,9 @@ export interface TickExecutionProfile {
   livingCellsAfter: number;
   logsBefore: number;
   logsAfter: number;
+  cellCloneMs: number;
+  orderSortMs: number;
+  boardCloneMs: number;
   setupMs: number;
   actionLoopMs: number;
   cleanupMs: number;
@@ -223,6 +226,9 @@ export interface StressTurnMetric {
   livingCellsBefore: number;
   livingCellsAfter: number;
   logsAdded: number;
+  cellCloneMs: number;
+  orderSortMs: number;
+  boardCloneMs: number;
   setupMs: number;
   actionLoopMs: number;
   cleanupMs: number;
@@ -241,6 +247,9 @@ export interface StressProfileSummary {
   finalTurn: number;
   maxPopulation: number;
   finalPopulation: number;
+  averageCellCloneMs: number;
+  averageOrderSortMs: number;
+  averageBoardCloneMs: number;
   averageSetupMs: number;
   averageActionLoopMs: number;
   averageCleanupMs: number;
@@ -253,6 +262,9 @@ export interface StressProfileSummary {
 }
 
 export interface TurnExecutionProfile {
+  cellCloneMs: number;
+  orderSortMs: number;
+  boardCloneMs: number;
   setupMs: number;
   actionLoopMs: number;
   cleanupMs: number;

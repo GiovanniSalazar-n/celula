@@ -109,6 +109,9 @@ export interface TickExecutionProfile {
   livingCellsAfter: number;
   logsBefore: number;
   logsAfter: number;
+  cellCloneMs: number;
+  orderSortMs: number;
+  boardCloneMs: number;
   setupMs: number;
   actionLoopMs: number;
   cleanupMs: number;

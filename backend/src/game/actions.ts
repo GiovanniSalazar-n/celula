@@ -1,6 +1,6 @@
 import { EAT_DAMAGE, INITIAL_AGE, MAX_HEALTH, REPRODUCE_MAX_AGE_EXCLUSIVE, REPRODUCE_MIN_HEALTH, REST_HEAL } from './constants.js';
 import { DIRECTIONS } from './directions.js';
-import { getCellIdAtCoordinates, isInsideBoard, moveCell, placeCell, removeCell } from './board.js';
+import { getCellIdAtCoordinates, moveCell, placeCell, removeCell } from './board.js';
 import { DIRECTION_DELTAS } from './directions.js';
 import type { ActionCode, Cell, Direction, ParsedAction, SimulationState } from './types.js';
 
@@ -68,16 +68,15 @@ export function resolveAction(
   }
 
   const [rowDelta, colDelta] = DIRECTION_DELTAS[action.direction];
-  const target = {
-    row: cell.position.row + rowDelta,
-    col: cell.position.col + colDelta,
-  };
-  if (!isInsideBoard(state.board, target)) {
+  const targetRow = cell.position.row + rowDelta;
+  const targetCol = cell.position.col + colDelta;
+
+  if (targetRow < 0 || targetRow >= state.board.rows || targetCol < 0 || targetCol >= state.board.cols) {
     cell.lastActionStatus = 'failed';
     return 'target is outside the board.';
   }
 
-  const occupantId = getCellIdAtCoordinates(state.board, target.row, target.col);
+  const occupantId = getCellIdAtCoordinates(state.board, targetRow, targetCol);
   const occupant = occupantId ? cellsById.get(occupantId) : undefined;
 
   if (action.kind === 'move') {
@@ -86,6 +85,7 @@ export function resolveAction(
       return 'destination is occupied.';
     }
 
+    const target = { row: targetRow, col: targetCol };
     moveCell(state.board, cell.position, target, cell.id);
     cell.position = target;
     cell.lastActionStatus = 'success';
@@ -143,7 +143,7 @@ export function resolveAction(
     teamId: cell.teamId,
     teamName: cell.teamName,
     teamColor: cell.teamColor,
-    position: target,
+    position: { row: targetRow, col: targetCol },
     health: childHealth,
     age: INITIAL_AGE,
     alive: true,
