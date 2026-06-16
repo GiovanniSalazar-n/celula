@@ -1,0 +1,6 @@
+{
+  "name": "Cell Battle",
+  "description": "A local two-player Battle of Cells MVP using the preserved neon HUD UI and a spec-driven engine.",
+  "requestFramePermissions": [],
+  "majorCapabilities": []
+}

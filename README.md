@@ -1,86 +1,33 @@
 # Battle of Cells
 
-Battle of Cells is a local two-player simulation where each player programs a safe Python-like strategy to control a colony of cells.
+Spec-driven development workspace initialized with GitHub Spec Kit.
 
-## Stack
+## Permanent Context
 
-* Frontend: React + Vite + TypeScript
-* Backend: Node.js + Express + TypeScript
-* Tests: Vitest, React Testing Library, Supertest
+Battle of Cells is a local two-player browser simulation game. Before planning
+or coding, read the relevant files in `docs/` and `specs/` plus the current
+constitution in `.specify/memory/constitution.md`.
 
-## Install
+The MVP preserves and adapts the existing UI from
+`Adudu02/First-Try-for-Cell-Battle-UI`; it does not rebuild the UI from zero.
+The MVP is local-only: no online multiplayer, no backend API, no database, and
+no login system.
 
-```bash
-npm install
-```
+## SDD Workflow
 
-## Run
+1. `$speckit-constitution` - maintain project principles.
+2. `$speckit-specify` - create or update a feature specification.
+3. `$speckit-clarify` - resolve unclear requirements when needed.
+4. `$speckit-plan` - create the technical implementation plan.
+5. `$speckit-tasks` - break the plan into actionable tasks.
+6. `$speckit-implement` - implement tasks test-first.
+7. `$speckit-analyze` - check alignment across artifacts when risk is high.
 
-Backend:
+## Local Tooling
 
-```bash
-npm run dev:backend
-```
+- Speckit CLI: `specify`
+- Script type: PowerShell
+- Project configuration: `.specify/`
+- Local Codex Speckit skills: `.agents/skills/`
 
-Frontend:
-
-```bash
-npm run dev:frontend
-```
-
-Or run both together:
-
-```bash
-npm run dev
-```
-
-Frontend URL: [http://localhost:5173](http://localhost:5173)  
-Backend URL: [http://localhost:3000](http://localhost:3000)
-
-## Tests
-
-All tests:
-
-```bash
-npm test
-```
-
-Backend only:
-
-```bash
-npm run test:backend
-```
-
-Frontend only:
-
-```bash
-npm run test:frontend
-```
-
-Stress profile:
-
-```bash
-npm run profile:stress -- --turns 250 --top 5
-```
-
-Longer stress profile:
-
-```bash
-npm run profile:stress -- --turns 1000 --top 10
-```
-
-## Docker
-
-Run the game in Docker:
-
-```bash
-docker compose up --build
-```
-
-Then open [http://localhost:5173](http://localhost:5173).
-
-The backend is available at [http://localhost:3000](http://localhost:3000).
-
-## Documentation
-
-See the [docs](docs) directory for the specification, architecture, API, test plan, roadmap, flow, decisions, profiling notes, and optimization notes.
+Run `specify check` to verify available agent integrations.
