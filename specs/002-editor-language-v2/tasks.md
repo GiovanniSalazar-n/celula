@@ -156,13 +156,13 @@
 
 **Purpose**: Run the full safety net, fix regressions, and update docs.
 
-- [ ] T049 Run all tests with `npm test`
-- [ ] T050 Run type checking with `npm run lint`
-- [ ] T051 Run production build with `npm run build`
-- [ ] T052 Fix any regressions found in `src/engine`, `src/components`, or `src/tests`
-- [ ] T053 Update user function documentation in `docs/03-user-function-contract.md`
-- [ ] T054 Update test plan documentation in `docs/06-test-plan.md`
-- [ ] T055 Update feature quickstart notes in `specs/002-editor-language-v2/quickstart.md`
+- [X] T049 Run all tests with `npm test`
+- [X] T050 Run type checking with `npm run lint`
+- [X] T051 Run production build with `npm run build`
+- [X] T052 Fix any regressions found in `src/engine`, `src/components`, or `src/tests`
+- [X] T053 Update user function documentation in `docs/03-user-function-contract.md`
+- [X] T054 Update test plan documentation in `docs/06-test-plan.md`
+- [X] T055 Update feature quickstart notes in `specs/002-editor-language-v2/quickstart.md`
 
 ---
 

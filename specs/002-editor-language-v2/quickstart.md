@@ -41,10 +41,13 @@ Validate these flows:
 1. Configure both players with existing MVP templates and start a match.
 2. Select turn limits 1, 5000, and 10000 before Play and confirm the selected
    value locks after Play.
-3. Validate a bounded-loop strategy that uses `range`, `len`, `sum`, or `any`.
-4. Validate a strategy that uses `isEnemy("n")` and `emptyDirections()`.
+3. Validate a bounded-loop strategy that uses `range`, `len`, `min`, `max`,
+   `sum`, `any`, or `clamp`.
+4. Validate a strategy that uses `isEnemy("n")`, `enemyDirections()`,
+   `emptyDirections()`, or `alliedDirections()`.
 5. Confirm forbidden code such as `while True`, `import`, `eval`, `fetch`,
-   `window`, `document`, and `setTimeout` is rejected before Play.
+   `window`, `document`, `setTimeout`, promises, recursion, and async code is
+   rejected before Play.
 6. Confirm runtime failures only consume the current cell action and the match
    continues.
 

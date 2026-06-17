@@ -152,9 +152,13 @@ Test that:
 - Unbounded `while` and `while true` are rejected.
 - Recursion is rejected.
 - `eval`, `exec`, `Function`, `fetch`, `window`, `document`, and
-  `localStorage` are rejected.
-- Safe helpers `range`, `len`, `sum`, `any`, `isEnemy`, and `emptyDirections`
-  validate and execute only against safe read-only values.
+  `localStorage`, promises, timers, async code, and recursion are rejected.
+- Safe value helpers `range`, `len`, `min`, `max`, `abs`, `round`, `floor`,
+  `ceil`, `sum`, `any`, `all`, and `clamp` validate and execute only against
+  safe values.
+- Read-only game helpers `isEnemy`, `isAllied`, `isEmpty`, `isOutside`,
+  `enemyDirections`, `emptyDirections`, and `alliedDirections` validate and
+  execute only against the current cell's eight nearby states.
 - Step limit stops excessive execution.
 - The 1 second timeout still works.
 - Runtime errors affect only the current acting cell.
@@ -165,7 +169,7 @@ Test that:
 Test that:
 
 - Default turn limit remains 5000.
-- A bounded preset up to 10000 can be selected before Play.
+- A whole-number turn limit from 1 to 10000 can be selected before Play.
 - Turn limit selection locks after Play.
 - Turn N executes fully before turn-limit victory evaluation.
 - Existing 5000-turn behavior still passes.

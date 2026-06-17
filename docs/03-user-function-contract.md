@@ -148,10 +148,13 @@ state. The function still receives only direct `health` and `nearby` arguments.
 Additional allowed syntax:
 
 - Bounded `for` loops over approved finite sources such as `nearby`,
-  `range(...)`, and `emptyDirections(nearby)`.
+  `range(...)`, safe arrays, `enemyDirections()`, `emptyDirections()`, and
+  `alliedDirections()`.
 - Local variables.
-- Approved helpers: `range`, `len`, `sum`, `any`, `isEnemy`, and
-  `emptyDirections`.
+- Approved value helpers: `range`, `len`, `min`, `max`, `abs`, `round`,
+  `floor`, `ceil`, `sum`, `any`, `all`, and `clamp`.
+- Approved read-only game helpers: `isEnemy`, `isAllied`, `isEmpty`,
+  `isOutside`, `enemyDirections`, `emptyDirections`, and `alliedDirections`.
 
 Still forbidden:
 
@@ -165,6 +168,8 @@ Still forbidden:
 - `Function`.
 - `fetch`.
 - Browser globals such as `window`, `document`, and `localStorage`.
+- Timers such as `setTimeout` and `setInterval`.
+- `require`, `Function`, `fetch`, promises, and dynamic execution APIs.
 - Async code.
 - Mutation of `health`, `nearby`, board, cells, team, turn, or internal state.
 
@@ -174,3 +179,16 @@ Runtime protection:
 - The 1 second timeout still applies.
 - Runtime errors, step-limit failures, and timeouts consume only the current
   cell action.
+
+## Turn Limit Selection
+
+Editor Language v2 also allows players to choose the match turn limit before
+Play.
+
+Rules:
+
+- Default remains `5000`.
+- Allowed values are whole numbers from `1` to `10000`.
+- The selected value locks after Play.
+- The selected final turn executes completely before turn-limit victory is
+  evaluated.
