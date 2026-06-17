@@ -11,6 +11,7 @@ describe('validateUserFunction', () => {
         isValid: true,
         error: null,
       });
+      expect(result.actionCodes?.length, name).toBeGreaterThan(0);
     }
   });
 
@@ -24,7 +25,28 @@ def cell(health, nearby):
 
     expect(result.isValid).toBe(true);
     expect(result.error).toBeNull();
+    expect(result.functionName).toBe('cell');
     expect(result.actionCodes).toEqual(['d', 'mn']);
+  });
+
+  it('keeps the current direct health and nearby argument contract exact', () => {
+    const wrongOrder = validateUserFunction(`
+def cell(nearby, health):
+    return "d"
+`);
+    const wrongNames = validateUserFunction(`
+def cell(life, surroundings):
+    return "d"
+`);
+
+    expect(wrongOrder).toMatchObject({
+      isValid: false,
+      error: 'Function must receive exactly health and nearby arguments.',
+    });
+    expect(wrongNames).toMatchObject({
+      isValid: false,
+      error: 'Function must receive exactly health and nearby arguments.',
+    });
   });
 
   it('accepts any documented literal action return', () => {
@@ -108,6 +130,20 @@ def cell(health, nearby):
     return "jump"
 `).isValid,
     ).toBe(false);
+  });
+
+  it('keeps the current literal-return rule for all return paths', () => {
+    const result = validateUserFunction(`
+def cell(health, nearby):
+    if nearby[0] == "enemy":
+        return "an"
+    return nearby[0]
+`);
+
+    expect(result).toMatchObject({
+      isValid: false,
+      error: 'Function returns must be literal valid action strings.',
+    });
   });
 
   it('rejects loops and timeout-prone code', () => {

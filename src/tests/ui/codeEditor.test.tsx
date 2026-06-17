@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import '@testing-library/jest-dom/vitest';
-import { render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { useState } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { CodeEditor } from '../../components/CodeEditor';
@@ -8,13 +8,17 @@ import type { PlayerConfig, SimulationSettings } from '../../types';
 
 const source = `def cell(health, nearby):
     if health < 50:
-        return "d"`;
+        return "d"
+    return "mn"`;
 
-function Harness() {
+const invalidSource = `def cell(life, nearby):
+    return "d"`;
+
+function Harness({ p1Code = source }: { p1Code?: string } = {}) {
   const [p1, setP1] = useState<PlayerConfig>({
     name: 'Team One',
     color: '#22d3ee',
-    code: source,
+    code: p1Code,
     isValid: false,
     validationError: null,
     selectedTemplate: 'CUSTOM',
@@ -61,5 +65,23 @@ describe('CodeEditor row numbers', () => {
     expect(p2Rows.getByText('1')).toBeInTheDocument();
     expect(p2Rows.getByText('2')).toBeInTheDocument();
     expect(p2Rows.getByText('3')).toBeInTheDocument();
+  });
+});
+
+describe('CodeEditor validation feedback', () => {
+  it('shows validated feedback after the current validator accepts a player function', () => {
+    render(<Harness />);
+
+    fireEvent.click(screen.getByTestId('p1-validate-btn'));
+
+    expect(screen.getByText('Validated')).toBeInTheDocument();
+  });
+
+  it('shows the current validator error next to the editor when validation fails', () => {
+    render(<Harness p1Code={invalidSource} />);
+
+    fireEvent.click(screen.getByTestId('p1-validate-btn'));
+
+    expect(screen.getByText('Function must receive exactly health and nearby arguments.')).toBeInTheDocument();
   });
 });

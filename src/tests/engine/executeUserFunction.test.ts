@@ -33,6 +33,39 @@ describe('executeUserFunction', () => {
     ).toBe('Timed out');
   });
 
+  it('falls back to rest when execution returns an invalid value or action', () => {
+    expect(
+      executeUserFunction('def cell(health, nearby):\n    return 42', {
+        health: 50,
+        nearby: ['empty', 'empty', 'empty', 'empty', 'empty', 'empty', 'empty', 'empty'],
+      }),
+    ).toEqual({
+      action: 'd',
+      error: 'Function returned number, expected string.',
+    });
+
+    expect(
+      executeUserFunction('def cell(health, nearby):\n    return "jump"', {
+        health: 50,
+        nearby: ['empty', 'empty', 'empty', 'empty', 'empty', 'empty', 'empty', 'empty'],
+      }),
+    ).toEqual({
+      action: 'd',
+      error: 'Invalid action code: jump',
+    });
+  });
+
+  it('does not let user code mutate the caller nearby values', () => {
+    const nearby = ['empty', 'empty', 'empty', 'empty', 'empty', 'empty', 'empty', 'empty'] as const;
+    const result = executeUserFunction('def cell(health, nearby):\n    nearby[0] = "enemy"\n    return "d"', {
+      health: 50,
+      nearby,
+    });
+
+    expect(result).toEqual({ action: 'd', error: null });
+    expect(nearby).toEqual(['empty', 'empty', 'empty', 'empty', 'empty', 'empty', 'empty', 'empty']);
+  });
+
   it('encodes nearby states without changing the documented direction order', () => {
     const nearby = ['empty', 'allied', 'enemy', 'outside', 'empty', 'empty', 'enemy', 'allied'] as const;
 

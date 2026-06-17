@@ -37,12 +37,12 @@
 
 **Purpose**: Inspect current validation/runtime/editor files and protect existing MVP behavior before extending the language.
 
-- [ ] T010 Inspect current validation and execution flow in `src/engine/validation/validateUserFunction.ts`, `src/engine/validation/executeUserFunction.ts`, and `src/engine/validation/buildFunctionArgs.ts`
-- [ ] T011 Inspect current editor examples and feedback in `src/components/CodeEditor.tsx` and `src/App.tsx`
-- [ ] T012 Inspect current runtime test coverage in `src/tests/engine/validateUserFunction.test.ts` and `src/tests/engine/executeUserFunction.test.ts`
-- [ ] T013 [P] Add missing baseline tests for existing valid MVP templates in `src/tests/engine/validateUserFunction.test.ts`
-- [ ] T014 [P] Add missing baseline tests for runtime errors consuming only the current cell action in `src/tests/engine/executeUserFunction.test.ts`
-- [ ] T015 [P] Add missing baseline editor validation feedback tests in `src/tests/ui/codeEditor.test.tsx`
+- [X] T010 Inspect current validation and execution flow in `src/engine/validation/validateUserFunction.ts`, `src/engine/validation/executeUserFunction.ts`, and `src/engine/validation/buildFunctionArgs.ts`
+- [X] T011 Inspect current editor examples and feedback in `src/components/CodeEditor.tsx` and `src/App.tsx`
+- [X] T012 Inspect current runtime test coverage in `src/tests/engine/validateUserFunction.test.ts` and `src/tests/engine/executeUserFunction.test.ts`
+- [X] T013 [P] Add missing baseline tests for existing valid MVP templates in `src/tests/engine/validateUserFunction.test.ts`
+- [X] T014 [P] Add missing baseline tests for runtime errors consuming only the current cell action in `src/tests/engine/executeUserFunction.test.ts`
+- [X] T015 [P] Add missing baseline editor validation feedback tests in `src/tests/ui/codeEditor.test.tsx`
 
 **Checkpoint**: Existing behavior has regression tests before v2 runtime changes.
 
