@@ -123,33 +123,17 @@ function translateExpressions(expr: string): string {
 // Preset code templates
 export const CODE_TEMPLATES = {
   PREDATOR: `# Hunter Predator
+# Attack first, then move into open space.
 # nearby order: n, s, e, w, ne, nw, se, sw
 
 def cell(health, nearby):
     if health <= 1:
         return "d"
-    elif nearby[0] == "enemy":
-        return "an"
-    elif nearby[1] == "enemy":
-        return "as"
-    elif nearby[2] == "enemy":
-        return "ae"
-    elif nearby[3] == "enemy":
-        return "aw"
-    elif nearby[4] == "enemy":
-        return "ane"
-    elif nearby[5] == "enemy":
-        return "anw"
-    elif nearby[6] == "enemy":
-        return "ase"
-    elif nearby[7] == "enemy":
-        return "asw"
-    elif nearby[2] == "empty":
-        return "me"
-    elif nearby[0] == "empty":
-        return "mn"
-    else:
-        return "d"`,
+    for direction in enemyDirections():
+        return "a" + direction
+    for direction in emptyDirections():
+        return "m" + direction
+    return "d"`,
 
   EXPANDING_COLONY: `# Expanding Colony
 # Reproduce into open space. Eat nearby opponents first.
@@ -158,40 +142,11 @@ def cell(health, nearby):
 def cell(health, nearby):
     if health <= 1:
         return "d"
-    elif nearby[0] == "enemy":
-        return "an"
-    elif nearby[1] == "enemy":
-        return "as"
-    elif nearby[2] == "enemy":
-        return "ae"
-    elif nearby[3] == "enemy":
-        return "aw"
-    elif nearby[4] == "enemy":
-        return "ane"
-    elif nearby[5] == "enemy":
-        return "anw"
-    elif nearby[6] == "enemy":
-        return "ase"
-    elif nearby[7] == "enemy":
-        return "asw"
-    elif nearby[4] == "empty":
-        return "rne"
-    elif nearby[6] == "empty":
-        return "rse"
-    elif nearby[5] == "empty":
-        return "rnw"
-    elif nearby[7] == "empty":
-        return "rsw"
-    elif nearby[0] == "empty":
-        return "rn"
-    elif nearby[1] == "empty":
-        return "rs"
-    elif nearby[2] == "empty":
-        return "re"
-    elif nearby[3] == "empty":
-        return "rw"
-    else:
-        return "d"`,
+    for direction in enemyDirections():
+        return "a" + direction
+    for direction in emptyDirections():
+        return "r" + direction
+    return "d"`,
 
   SENTINEL: `# Cautious Sentinel
 # Hold position, eat immediate threats, reproduce when space is open.
@@ -200,28 +155,19 @@ def cell(health, nearby):
 def cell(health, nearby):
     if health < 40:
         return "d"
-    elif nearby[0] == "enemy":
+    if isEnemy("n"):
         return "an"
-    elif nearby[2] == "enemy":
+    if isEnemy("e"):
         return "ae"
-    elif nearby[3] == "enemy":
+    if isEnemy("w"):
         return "aw"
-    elif nearby[1] == "enemy":
+    if isEnemy("s"):
         return "as"
-    elif nearby[4] == "enemy":
-        return "ane"
-    elif nearby[5] == "enemy":
-        return "anw"
-    elif nearby[6] == "enemy":
-        return "ase"
-    elif nearby[7] == "enemy":
-        return "asw"
-    elif nearby[0] == "empty":
+    if isEmpty("n"):
         return "rn"
-    elif nearby[1] == "empty":
+    if isEmpty("s"):
         return "rs"
-    else:
-        return "d"`,
+    return "d"`,
 
   RANDOM_EXPLORER: `# Open-Space Explorer
 # No random calls: literal choices only, safe for validation.
@@ -230,34 +176,10 @@ def cell(health, nearby):
 def cell(health, nearby):
     if health <= 1:
         return "d"
-    elif nearby[4] == "enemy":
-        return "ane"
-    elif nearby[6] == "enemy":
-        return "ase"
-    elif nearby[5] == "enemy":
-        return "anw"
-    elif nearby[7] == "enemy":
-        return "asw"
-    elif nearby[0] == "enemy":
-        return "an"
-    elif nearby[1] == "enemy":
-        return "as"
-    elif nearby[2] == "enemy":
-        return "ae"
-    elif nearby[3] == "enemy":
-        return "aw"
-    elif nearby[4] == "empty":
-        return "mne"
-    elif nearby[6] == "empty":
-        return "mse"
-    elif nearby[5] == "empty":
-        return "mnw"
-    elif nearby[7] == "empty":
-        return "msw"
-    elif nearby[0] == "empty":
-        return "mn"
-    elif nearby[2] == "empty":
-        return "me"
-    else:
-        return "d"`
+    if len(enemyDirections()) > 0:
+        for direction in enemyDirections():
+            return "a" + direction
+    for direction in emptyDirections():
+        return "m" + direction
+    return "d"`
 };

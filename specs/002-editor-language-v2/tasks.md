@@ -106,13 +106,13 @@
 - [X] T031 [P] [US3] Add forbidden syntax tests for imports, require, eval, exec, Function, fetch, browser globals, promises, timers, async code, and direct game-state access in `src/tests/engine/validateUserFunction.test.ts`
 - [X] T032 [P] [US3] Add recursion rejection tests in `src/tests/engine/validateUserFunction.test.ts`
 - [X] T033 [P] [US3] Add unbounded loop rejection tests for `while`, `while True`, unknown loop sources, and excessive static ranges in `src/tests/engine/validateUserFunction.test.ts`
-- [ ] T034 [P] [US3] Add editor error message tests for forbidden syntax in `src/tests/ui/codeEditor.test.tsx`
+- [X] T034 [P] [US3] Add editor error message tests for forbidden syntax in `src/tests/ui/codeEditor.test.tsx`
 
 ### Implementation for User Story 3
 
 - [X] T035 [US3] Extract forbidden syntax checks into `src/engine/validation/forbiddenSyntax.ts`
 - [X] T036 [US3] Integrate forbidden syntax errors into `src/engine/validation/validateUserFunction.ts`
-- [ ] T037 [US3] Improve user-facing validation messages in `src/components/CodeEditor.tsx`
+- [X] T037 [US3] Improve user-facing validation messages in `src/components/CodeEditor.tsx`
 
 **Checkpoint**: Unsafe code is blocked before match start with clear feedback.
 
@@ -146,9 +146,9 @@
 **Purpose**: Improve help text, examples, and validation feedback while preserving the existing UI.
 
 - [X] T045 [P] Add v2 examples for loops and helpers in `src/engine/runtime/examples.ts`
-- [ ] T046 Update editor help text for valid action codes, helpers, loops, and forbidden syntax in `src/components/CodeEditor.tsx`
-- [ ] T047 Update player configuration template wiring in `src/App.tsx`
-- [ ] T048 [P] Add UI tests for v2 template insertion and validation feedback in `src/tests/ui/codeEditor.test.tsx`
+- [X] T046 Update editor help text for valid action codes, helpers, loops, and forbidden syntax in `src/components/CodeEditor.tsx`
+- [X] T047 Update player configuration template wiring in `src/App.tsx`
+- [X] T048 [P] Add UI tests for v2 template insertion and validation feedback in `src/tests/ui/codeEditor.test.tsx`
 
 ---
 

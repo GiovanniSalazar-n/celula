@@ -14,6 +14,10 @@ const source = `def cell(health, nearby):
 const invalidSource = `def cell(life, nearby):
     return "d"`;
 
+const forbiddenSource = `def cell(health, nearby):
+    while True:
+        return "d"`;
+
 function Harness({ p1Code = source }: { p1Code?: string } = {}) {
   const [p1, setP1] = useState<PlayerConfig>({
     name: 'Team One',
@@ -83,5 +87,33 @@ describe('CodeEditor validation feedback', () => {
     fireEvent.click(screen.getByTestId('p1-validate-btn'));
 
     expect(screen.getByText('Function must receive exactly health and nearby arguments.')).toBeInTheDocument();
+  });
+
+  it('shows forbidden syntax errors from the v2 validator', () => {
+    render(<Harness p1Code={forbiddenSource} />);
+
+    fireEvent.click(screen.getByTestId('p1-validate-btn'));
+
+    expect(screen.getByText('while loops are not allowed.')).toBeInTheDocument();
+  });
+
+  it('loads and validates the helper-based colony template', () => {
+    render(<Harness />);
+
+    fireEvent.change(screen.getAllByLabelText('LOAD ALGORITHMS')[0], {
+      target: { value: 'EXPANDING_COLONY' },
+    });
+    fireEvent.click(screen.getByTestId('p1-validate-btn'));
+
+    expect(screen.getByDisplayValue(/for direction in emptyDirections\(\):/)).toBeInTheDocument();
+    expect(screen.getByText('Validated')).toBeInTheDocument();
+  });
+
+  it('shows v2 loop and helper guidance in the existing help panel', () => {
+    render(<Harness />);
+
+    expect(screen.getByText('v2 helpers')).toBeInTheDocument();
+    expect(screen.getByText(/for direction in emptyDirections/)).toBeInTheDocument();
+    expect(screen.getByText(/No while, import, fetch, timers, or browser globals/)).toBeInTheDocument();
   });
 });

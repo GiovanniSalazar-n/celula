@@ -185,7 +185,7 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
                 />
               </div>
               <div>
-                <label className="block text-xs font-mono text-slate-400 mb-1">LOAD ALGORITHMS</label>
+                <label htmlFor="p1-preset-select" className="block text-xs font-mono text-slate-400 mb-1">LOAD ALGORITHMS</label>
                 <select
                   id="p1-preset-select"
                   value={p1.selectedTemplate}
@@ -278,7 +278,7 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
                 />
               </div>
               <div>
-                <label className="block text-xs font-mono text-slate-400 mb-1">LOAD ALGORITHMS</label>
+                <label htmlFor="p2-preset-select" className="block text-xs font-mono text-slate-400 mb-1">LOAD ALGORITHMS</label>
                 <select
                   id="p2-preset-select"
                   value={p2.selectedTemplate}
@@ -375,6 +375,15 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
               <div className="border-t border-slate-850 pt-2">
                 <p className="text-cyan-400 font-bold">"d" Rest</p>
                 <p className="text-slate-400 text-[10px]">Heals +3 health. Max caps 100.</p>
+              </div>
+              <div className="border-t border-slate-850 pt-2">
+                <p className="text-cyan-400 font-bold">v2 helpers</p>
+                <p className="text-slate-400 text-[10px]">Use bounded for loops with range(), enemyDirections(), emptyDirections(), and alliedDirections().</p>
+                <p className="text-slate-500 font-bold">e.g. for direction in emptyDirections()</p>
+              </div>
+              <div className="border-t border-slate-850 pt-2">
+                <p className="text-cyan-400 font-bold">safe checks</p>
+                <p className="text-slate-400 text-[10px]">isEnemy("n"), isEmpty("e"), len(), sum(), any(), clamp(). No while, import, fetch, timers, or browser globals.</p>
               </div>
             </div>
           </div>
