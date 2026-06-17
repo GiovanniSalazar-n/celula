@@ -6,6 +6,7 @@ export function transpilePythonToJS(pythonCode: string): { jsCode: string; error
     const lines = pythonCode.split(/\r?\n/);
     const outputLines: string[] = [];
     const indentStack: number[] = [];
+    const declaredVariables = new Set<string>();
     let loopCounter = 0;
 
     for (let i = 0; i < lines.length; i++) {
@@ -58,6 +59,12 @@ export function transpilePythonToJS(pythonCode: string): { jsCode: string; error
         parsedLine = `else if (${translateExpressions(expr)}) {`;
       } else if (parsedLine.startsWith('else:') || parsedLine === 'else :') {
         parsedLine = `else {`;
+      } else if (parsedLine.startsWith('for ') && parsedLine.endsWith(':')) {
+        const match = parsedLine.match(/for\s+(\w+)\s+in\s+(.+)\s*:/);
+        if (!match) {
+          throw new Error('Invalid for loop syntax');
+        }
+        parsedLine = `for (const ${match[1]} of ${translateExpressions(match[2].trim())}) {\n${' '.repeat(leadingSpaces + 2)}__step();`;
       } else if (parsedLine.startsWith('while ') && parsedLine.endsWith(':')) {
         const expr = parsedLine.substring(6, parsedLine.length - 1).trim();
         loopCounter++;
@@ -65,6 +72,11 @@ export function transpilePythonToJS(pythonCode: string): { jsCode: string; error
       } else {
         // Normal statement, replace pythonisms
         parsedLine = translateExpressions(parsedLine);
+        const assignment = parsedLine.match(/^([A-Za-z_]\w*)\s*=\s*(.+)$/);
+        if (assignment && !declaredVariables.has(assignment[1])) {
+          declaredVariables.add(assignment[1]);
+          parsedLine = `let ${assignment[1]} = ${assignment[2]}`;
+        }
         // Ensure semicolons or endings are comfortable in JS
         if (!parsedLine.endsWith(';') && !parsedLine.endsWith('{') && !parsedLine.endsWith('}')) {
           parsedLine += ';';

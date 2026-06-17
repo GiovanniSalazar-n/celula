@@ -146,7 +146,38 @@ def cell(health, nearby):
     });
   });
 
-  it('rejects loops and timeout-prone code', () => {
+  it('allows safe value helpers and read-only game helpers', () => {
+    const result = validateUserFunction(`
+def cell(health, nearby):
+    if len(enemyDirections()) > 0:
+        return "an"
+    if any([isEmpty("n"), isEmpty("e")]):
+        return "rn"
+    if sum([1, 2, 3]) > max(1, 2):
+        return "d"
+    return "mn"
+`);
+
+    expect(result.isValid).toBe(true);
+    expect(result.error).toBeNull();
+  });
+
+  it('allows bounded for loops over safe finite sources', () => {
+    const result = validateUserFunction(`
+def cell(health, nearby):
+    for direction in emptyDirections():
+        return "r" + direction
+    for i in range(0, 2):
+        if health > i:
+            return "d"
+    return "d"
+`);
+
+    expect(result.isValid).toBe(true);
+    expect(result.error).toBeNull();
+  });
+
+  it('rejects unbounded loops and timeout-prone code', () => {
     const loopResult = validateUserFunction(`
 def cell(health, nearby):
     while True:
@@ -155,7 +186,42 @@ def cell(health, nearby):
 `);
 
     expect(loopResult.isValid).toBe(false);
-    expect(loopResult.error).toBe('Loops are not allowed because functions must finish within 1 second.');
+    expect(loopResult.error).toBe('while loops are not allowed.');
+  });
+
+  it('rejects recursion, browser globals, timers, promises, and dynamic execution APIs', () => {
+    const forbiddenSources = [
+      'def cell(health, nearby):\n    return cell(health, nearby)',
+      'def cell(health, nearby):\n    return window.location',
+      'def cell(health, nearby):\n    return document.title',
+      'def cell(health, nearby):\n    return localStorage.getItem("x")',
+      'def cell(health, nearby):\n    fetch("https://example.com")\n    return "d"',
+      'def cell(health, nearby):\n    setTimeout(lambda: 1, 1)\n    return "d"',
+      'def cell(health, nearby):\n    Promise.resolve(1)\n    return "d"',
+      'def cell(health, nearby):\n    Function("return 1")\n    return "d"',
+    ];
+
+    for (const source of forbiddenSources) {
+      expect(validateUserFunction(source).isValid, source).toBe(false);
+    }
+  });
+
+  it('rejects loops over unknown sources and excessive static ranges', () => {
+    const unknownSource = validateUserFunction(`
+def cell(health, nearby):
+    for item in board:
+        return "d"
+    return "d"
+`);
+    const excessiveRange = validateUserFunction(`
+def cell(health, nearby):
+    for i in range(0, 100000):
+        return "d"
+    return "d"
+`);
+
+    expect(unknownSource.isValid).toBe(false);
+    expect(excessiveRange.isValid).toBe(false);
   });
 });
 

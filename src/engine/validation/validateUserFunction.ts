@@ -1,5 +1,7 @@
 import type { ActionCode } from '../types/game';
 import { parseActionCode } from '../actions/parseActionCode';
+import { ALLOWED_HELPERS } from './allowedHelpers';
+import { findForbiddenSyntax } from './forbiddenSyntax';
 
 export interface UserFunctionValidationResult {
   isValid: boolean;
@@ -9,15 +11,15 @@ export interface UserFunctionValidationResult {
 }
 
 const FUNCTION_SIGNATURE = /^\s*def\s+([A-Za-z_]\w*)\s*\(([^)]*)\)\s*:\s*$/m;
-const LOOP_PATTERN = /^\s*(for|while)\b/m;
-const IMPORT_PATTERN = /^\s*(import|from)\b/m;
-const MUTATION_PATTERN = /^\s*(health|nearby)(?:\s*\[[^\]]+\])?\s*(=|\+=|-=|\*=|\/=|\/\/=|%=)/m;
-const FORBIDDEN_STATE_PATTERN = /\b(board|turn|internal_state|internal|cells|team)\b|\bcell\s*\./;
-const DANGEROUS_CALL_PATTERN =
-  /\b(open|eval|exec|globals|locals|vars|dir|getattr|setattr|delattr|__import__|compile|input)\s*\(/;
-const NETWORK_PATTERN = /\b(requests|socket|urllib|httpx|fetch)\b/;
 const RETURN_PATTERN = /^\s*return\s+(.+?)\s*$/gm;
 const LITERAL_RETURN_PATTERN = /^(['"])(.*?)\1$/;
+const CONCAT_RETURN_PATTERN = /^(['"])([mar])\1\s*\+\s*([A-Za-z_]\w*)$/;
+const FOR_LOOP_PATTERN = /^\s*for\s+([A-Za-z_]\w*)\s+in\s+(.+?)\s*:\s*$/gm;
+const RANGE_PATTERN = /^range\s*\(\s*(-?\d+)\s*(?:,\s*(-?\d+)\s*)?\)$/;
+const LIST_LITERAL_PATTERN = /^\[[\s\S]*\]$/;
+const DIRECTION_HELPER_PATTERN = /^(enemyDirections|emptyDirections|alliedDirections)\s*\(\s*\)$/;
+const SAFE_LOOP_RANGE_LIMIT = 512;
+const allowedHelperSet = new Set<string>(ALLOWED_HELPERS);
 
 export function validateUserFunction(source: string): UserFunctionValidationResult {
   if (source.trim() === '') {
@@ -39,33 +41,19 @@ export function validateUserFunction(source: string): UserFunctionValidationResu
     return invalid('Function must receive exactly health and nearby arguments.');
   }
 
-  if (LOOP_PATTERN.test(source)) {
-    return invalid('Loops are not allowed because functions must finish within 1 second.');
+  const forbiddenSyntax = findForbiddenSyntax(source, functionName);
+  if (forbiddenSyntax) {
+    return invalid(forbiddenSyntax);
   }
 
-  if (IMPORT_PATTERN.test(source)) {
-    return invalid('Imports are not allowed.');
+  const loopAnalysis = analyzeForLoops(source);
+  if (loopAnalysis.error) {
+    return invalid(loopAnalysis.error);
   }
 
-  if (DANGEROUS_CALL_PATTERN.test(source)) {
-    return invalid('Dangerous builtins are not allowed.');
-  }
-
-  if (NETWORK_PATTERN.test(source)) {
-    return invalid('Network access is not allowed.');
-  }
-
-  if (MUTATION_PATTERN.test(source)) {
-    return invalid('User functions cannot mutate provided arguments or game state.');
-  }
-
-  const body = source
-    .split(/\r?\n/)
-    .filter((line) => !line.trim().startsWith('def '))
-    .join('\n');
-
-  if (FORBIDDEN_STATE_PATTERN.test(body)) {
-    return invalid('User functions can only access health and nearby.');
+  const helperError = validateHelperCalls(source, functionName);
+  if (helperError) {
+    return invalid(helperError);
   }
 
   const actionCodes: ActionCode[] = [];
@@ -80,7 +68,13 @@ export function validateUserFunction(source: string): UserFunctionValidationResu
     const literal = expression.match(LITERAL_RETURN_PATTERN);
 
     if (!literal) {
-      return invalid('Function returns must be literal valid action strings.');
+      const dynamicReturn = expression.match(CONCAT_RETURN_PATTERN);
+      if (!dynamicReturn || !loopAnalysis.directionVariables.has(dynamicReturn[3])) {
+        return invalid('Function returns must be literal valid action strings.');
+      }
+
+      actionCodes.push(`${dynamicReturn[2]}${dynamicReturn[3]}` as ActionCode);
+      continue;
     }
 
     const parsed = parseActionCode(literal[2]);
@@ -97,6 +91,64 @@ export function validateUserFunction(source: string): UserFunctionValidationResu
     functionName,
     actionCodes,
   };
+}
+
+function analyzeForLoops(source: string): { error: string | null; directionVariables: Set<string> } {
+  const directionVariables = new Set<string>();
+  const loops = [...source.matchAll(FOR_LOOP_PATTERN)];
+
+  for (const loop of loops) {
+    const variableName = loop[1];
+    const sourceExpression = loop[2].trim();
+
+    if (sourceExpression === 'nearby' || LIST_LITERAL_PATTERN.test(sourceExpression)) {
+      continue;
+    }
+
+    if (DIRECTION_HELPER_PATTERN.test(sourceExpression)) {
+      directionVariables.add(variableName);
+      continue;
+    }
+
+    const range = sourceExpression.match(RANGE_PATTERN);
+    if (range) {
+      const start = range[2] === undefined ? 0 : Number(range[1]);
+      const end = range[2] === undefined ? Number(range[1]) : Number(range[2]);
+      if (Math.max(0, end - start) > SAFE_LOOP_RANGE_LIMIT) {
+        return {
+          error: `range loops must contain ${SAFE_LOOP_RANGE_LIMIT} or fewer steps.`,
+          directionVariables,
+        };
+      }
+      continue;
+    }
+
+    return {
+      error: 'for loops must use nearby, range(...), safe arrays, or direction helpers.',
+      directionVariables,
+    };
+  }
+
+  return { error: null, directionVariables };
+}
+
+function validateHelperCalls(source: string, functionName: string): string | null {
+  const body = source
+    .split(/\r?\n/)
+    .filter((line) => !line.trim().startsWith('def '))
+    .join('\n');
+  const calls = [...body.matchAll(/\b([A-Za-z_]\w*)\s*\(/g)].map((match) => match[1]);
+  const allowedCalls = new Set(['if', 'elif', 'for', 'return', functionName, ...allowedHelperSet]);
+
+  for (const call of calls) {
+    if (allowedCalls.has(call)) {
+      continue;
+    }
+
+    return `Helper "${call}" is not allowed.`;
+  }
+
+  return null;
 }
 
 function invalid(error: string): UserFunctionValidationResult {

@@ -2,13 +2,21 @@ import { parseActionCode } from '../actions/parseActionCode';
 import { NEIGHBOR_STATES } from '../constants/gameConstants';
 import type { ActionCode, CellFunctionArgs, NeighborState } from '../types/game';
 import { transpilePythonToJS } from '../../utils/interpreter';
+import { createSafeContext } from '../runtime/createSafeContext';
+import { createStepLimiter } from '../runtime/stepLimiter';
+import type { SafeHelpers } from '../runtime/safeHelpers';
 
 export interface UserFunctionExecutionResult {
   action: ActionCode | 'd';
   error: string | null;
 }
 
-type CompiledUserFunction = (health: number, nearby: readonly string[]) => unknown;
+type CompiledUserFunction = (
+  health: number,
+  nearby: readonly string[],
+  helpers: SafeHelpers,
+  consumeStep: () => void,
+) => unknown;
 
 const MAX_EXECUTION_CACHE_ENTRIES_PER_SOURCE = 8192;
 const compiledFunctionCache = new Map<string, CompiledUserFunction>();
@@ -26,7 +34,7 @@ export function executeUserFunctionWithNearbyKey(
   nearbyKey: number,
   createNearby: () => readonly NeighborState[],
 ): UserFunctionExecutionResult {
-  if (/^\s*(for|while)\b/m.test(source)) {
+  if (/^\s*while\b/m.test(source)) {
     return { action: 'd', error: 'Timed out' };
   }
 
@@ -37,7 +45,18 @@ export function executeUserFunctionWithNearbyKey(
       return cachedResult;
     }
 
-    const action = compileUserFunction(source)(health, Object.freeze(createNearby()));
+    const args = {
+      health,
+      nearby: Object.freeze(createNearby()),
+    };
+    const stepLimiter = createStepLimiter();
+    const context = createSafeContext(args, stepLimiter);
+    const action = compileUserFunction(source)(
+      context.health,
+      context.nearby,
+      context.helpers,
+      () => stepLimiter.consume(),
+    );
 
     if (typeof action !== 'string') {
       return cacheExecutionResult(source, cacheKey, {
@@ -75,7 +94,30 @@ export function compileUserFunction(source: string): CompiledUserFunction {
   const wrapper = new Function(
     'health',
     'nearby',
+    'helpers',
+    '__step',
     `
+      const {
+        range,
+        len,
+        min,
+        max,
+        abs,
+        round,
+        floor,
+        ceil,
+        sum,
+        any,
+        all,
+        clamp,
+        isEnemy,
+        isAllied,
+        isEmpty,
+        isOutside,
+        enemyDirections,
+        emptyDirections,
+        alliedDirections,
+      } = helpers;
       ${jsCode}
       if (typeof cell !== 'function') {
         throw new Error("cell is not a function.");

@@ -56,17 +56,17 @@
 
 ### Tests for User Story 1
 
-- [ ] T016 [P] [US1] Add validation tests for safe value helpers in `src/tests/engine/validateUserFunction.test.ts`
-- [ ] T017 [P] [US1] Add execution tests for safe value helpers in `src/tests/engine/executeUserFunction.test.ts`
-- [ ] T018 [P] [US1] Add bounded `for` loop validation tests for `range`, safe arrays, and helper direction lists in `src/tests/engine/validateUserFunction.test.ts`
-- [ ] T019 [P] [US1] Add bounded loop execution tests in `src/tests/engine/executeUserFunction.test.ts`
+- [X] T016 [P] [US1] Add validation tests for safe value helpers in `src/tests/engine/validateUserFunction.test.ts`
+- [X] T017 [P] [US1] Add execution tests for safe value helpers in `src/tests/engine/executeUserFunction.test.ts`
+- [X] T018 [P] [US1] Add bounded `for` loop validation tests for `range`, safe arrays, and helper direction lists in `src/tests/engine/validateUserFunction.test.ts`
+- [X] T019 [P] [US1] Add bounded loop execution tests in `src/tests/engine/executeUserFunction.test.ts`
 
 ### Implementation for User Story 1
 
-- [ ] T020 [US1] Add safe value helper allow-list metadata in `src/engine/validation/allowedHelpers.ts`
-- [ ] T021 [US1] Implement safe value helpers in `src/engine/runtime/safeHelpers.ts`
-- [ ] T022 [US1] Extend validator support for bounded `for` loops in `src/engine/validation/validateUserFunction.ts`
-- [ ] T023 [US1] Wire helper execution into the runtime wrapper in `src/engine/validation/executeUserFunction.ts`
+- [X] T020 [US1] Add safe value helper allow-list metadata in `src/engine/validation/allowedHelpers.ts`
+- [X] T021 [US1] Implement safe value helpers in `src/engine/runtime/safeHelpers.ts`
+- [X] T022 [US1] Extend validator support for bounded `for` loops in `src/engine/validation/validateUserFunction.ts`
+- [X] T023 [US1] Wire helper execution into the runtime wrapper in `src/engine/validation/executeUserFunction.ts`
 
 **Checkpoint**: Bounded-loop strategies and safe value helpers work without exposing engine state.
 
@@ -80,16 +80,16 @@
 
 ### Tests for User Story 2
 
-- [ ] T024 [P] [US2] Add tests proving `nearby` exposes only eight neighbor states in `src/tests/engine/buildFunctionArgs.test.ts`
-- [ ] T025 [P] [US2] Add validation tests for read-only game helpers in `src/tests/engine/validateUserFunction.test.ts`
-- [ ] T026 [P] [US2] Add execution tests for `isEnemy`, `isAllied`, `isEmpty`, `isOutside`, `enemyDirections`, `emptyDirections`, and `alliedDirections` in `src/tests/engine/executeUserFunction.test.ts`
-- [ ] T027 [P] [US2] Add mutation-rejection tests for helper context in `src/tests/engine/validateUserFunction.test.ts`
+- [X] T024 [P] [US2] Add tests proving `nearby` exposes only eight neighbor states in `src/tests/engine/buildFunctionArgs.test.ts`
+- [X] T025 [P] [US2] Add validation tests for read-only game helpers in `src/tests/engine/validateUserFunction.test.ts`
+- [X] T026 [P] [US2] Add execution tests for `isEnemy`, `isAllied`, `isEmpty`, `isOutside`, `enemyDirections`, `emptyDirections`, and `alliedDirections` in `src/tests/engine/executeUserFunction.test.ts`
+- [X] T027 [P] [US2] Add mutation-rejection tests for helper context in `src/tests/engine/validateUserFunction.test.ts`
 
 ### Implementation for User Story 2
 
-- [ ] T028 [US2] Create read-only safe context builder in `src/engine/runtime/createSafeContext.ts`
-- [ ] T029 [US2] Implement read-only game helpers in `src/engine/runtime/safeHelpers.ts`
-- [ ] T030 [US2] Route current `health` and `nearby` arguments through the safe context in `src/engine/validation/buildFunctionArgs.ts` and `src/engine/validation/executeUserFunction.ts`
+- [X] T028 [US2] Create read-only safe context builder in `src/engine/runtime/createSafeContext.ts`
+- [X] T029 [US2] Implement read-only game helpers in `src/engine/runtime/safeHelpers.ts`
+- [X] T030 [US2] Route current `health` and `nearby` arguments through the safe context in `src/engine/validation/buildFunctionArgs.ts` and `src/engine/validation/executeUserFunction.ts`
 
 **Checkpoint**: Helper strategies read neighbor state without board, player, match, cell ID, or mutable object access.
 
@@ -103,15 +103,15 @@
 
 ### Tests for User Story 3
 
-- [ ] T031 [P] [US3] Add forbidden syntax tests for imports, require, eval, exec, Function, fetch, browser globals, promises, timers, async code, and direct game-state access in `src/tests/engine/validateUserFunction.test.ts`
-- [ ] T032 [P] [US3] Add recursion rejection tests in `src/tests/engine/validateUserFunction.test.ts`
-- [ ] T033 [P] [US3] Add unbounded loop rejection tests for `while`, `while True`, unknown loop sources, and excessive static ranges in `src/tests/engine/validateUserFunction.test.ts`
+- [X] T031 [P] [US3] Add forbidden syntax tests for imports, require, eval, exec, Function, fetch, browser globals, promises, timers, async code, and direct game-state access in `src/tests/engine/validateUserFunction.test.ts`
+- [X] T032 [P] [US3] Add recursion rejection tests in `src/tests/engine/validateUserFunction.test.ts`
+- [X] T033 [P] [US3] Add unbounded loop rejection tests for `while`, `while True`, unknown loop sources, and excessive static ranges in `src/tests/engine/validateUserFunction.test.ts`
 - [ ] T034 [P] [US3] Add editor error message tests for forbidden syntax in `src/tests/ui/codeEditor.test.tsx`
 
 ### Implementation for User Story 3
 
-- [ ] T035 [US3] Extract forbidden syntax checks into `src/engine/validation/forbiddenSyntax.ts`
-- [ ] T036 [US3] Integrate forbidden syntax errors into `src/engine/validation/validateUserFunction.ts`
+- [X] T035 [US3] Extract forbidden syntax checks into `src/engine/validation/forbiddenSyntax.ts`
+- [X] T036 [US3] Integrate forbidden syntax errors into `src/engine/validation/validateUserFunction.ts`
 - [ ] T037 [US3] Improve user-facing validation messages in `src/components/CodeEditor.tsx`
 
 **Checkpoint**: Unsafe code is blocked before match start with clear feedback.
@@ -126,16 +126,16 @@
 
 ### Tests for User Story 4
 
-- [ ] T038 [P] [US4] Add step-limit tests for excessive bounded loops in `src/tests/engine/executeUserFunction.test.ts`
-- [ ] T039 [P] [US4] Add timeout regression tests in `src/tests/engine/executeUserFunction.test.ts`
-- [ ] T040 [P] [US4] Add turn-engine integration tests proving runtime failure consumes only current cell action in `src/tests/engine/turnEngine.test.ts`
+- [X] T038 [P] [US4] Add step-limit tests for excessive bounded loops in `src/tests/engine/executeUserFunction.test.ts`
+- [X] T039 [P] [US4] Add timeout regression tests in `src/tests/engine/executeUserFunction.test.ts`
+- [X] T040 [P] [US4] Add turn-engine integration tests proving runtime failure consumes only current cell action in `src/tests/engine/turnEngine.test.ts`
 
 ### Implementation for User Story 4
 
-- [ ] T041 [US4] Implement runtime step counter in `src/engine/runtime/stepLimiter.ts`
-- [ ] T042 [US4] Add runtime error types and messages in `src/engine/runtime/runtimeErrors.ts`
-- [ ] T043 [US4] Enforce step limit and timeout behavior in `src/engine/validation/executeUserFunction.ts`
-- [ ] T044 [US4] Ensure turn engine records runtime failures without ending the match in `src/engine/turns/turnEngine.ts`
+- [X] T041 [US4] Implement runtime step counter in `src/engine/runtime/stepLimiter.ts`
+- [X] T042 [US4] Add runtime error types and messages in `src/engine/runtime/runtimeErrors.ts`
+- [X] T043 [US4] Enforce step limit and timeout behavior in `src/engine/validation/executeUserFunction.ts`
+- [X] T044 [US4] Ensure turn engine records runtime failures without ending the match in `src/engine/turns/turnEngine.ts`
 
 **Checkpoint**: Long or failing user code no longer threatens the simulation loop.
 
@@ -145,7 +145,7 @@
 
 **Purpose**: Improve help text, examples, and validation feedback while preserving the existing UI.
 
-- [ ] T045 [P] Add v2 examples for loops and helpers in `src/engine/runtime/examples.ts`
+- [X] T045 [P] Add v2 examples for loops and helpers in `src/engine/runtime/examples.ts`
 - [ ] T046 Update editor help text for valid action codes, helpers, loops, and forbidden syntax in `src/components/CodeEditor.tsx`
 - [ ] T047 Update player configuration template wiring in `src/App.tsx`
 - [ ] T048 [P] Add UI tests for v2 template insertion and validation feedback in `src/tests/ui/codeEditor.test.tsx`

@@ -57,6 +57,36 @@ describe('executeTurn', () => {
     });
   });
 
+  it('step-limit runtime failures consume only the current cell action', () => {
+    const match = {
+      ...createMatchFixture([
+        { ...cellOneFixture, health: 50, position: { row: 10, column: 10 } },
+        { ...cellTwoFixture, health: 60, position: { row: 10, column: 11 } },
+      ]),
+      players: [
+        {
+          ...playerOneFixture,
+          functionSource:
+            'def cell(health, nearby):\n    total = 0\n    for i in range(0, 10000):\n        total = total + i\n    return "d"',
+        },
+        { ...playerTwoFixture, functionSource: 'def cell(health, nearby):\n    return "d"' },
+      ] as const,
+    };
+
+    const result = executeTurn(match);
+    const p1Cell = result.board.cells.find((cell) => cell.id === cellOneFixture.id);
+    const p2Cell = result.board.cells.find((cell) => cell.id === cellTwoFixture.id);
+
+    expect(p1Cell?.health).toBe(50);
+    expect(p1Cell?.lastAction).toBe('runtime-error');
+    expect(p2Cell?.health).toBe(63);
+    expect(result.errors[0]).toMatchObject({
+      type: 'runtime',
+      cellId: cellOneFixture.id,
+      message: 'Step limit exceeded.',
+    });
+  });
+
   it('bounds invalid action telemetry so crowded reproduction does not retain unbounded history', () => {
     const packedCells = Array.from({ length: MAX_ERRORS_PER_TURN + 80 }, (_, index) => ({
       ...cellOneFixture,
