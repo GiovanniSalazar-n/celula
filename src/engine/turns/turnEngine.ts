@@ -1,15 +1,14 @@
 import { parseActionCode } from '../actions/parseActionCode';
-import { createBoard } from '../board/createBoard';
 import { getCellAtPosition } from '../board/occupancy';
 import { isInsideBoard, offsetPosition, positionKey } from '../board/position';
 import {
+  DIRECTIONS,
   EAT_DAMAGE,
   MAX_ERRORS_PER_TURN,
   MAX_HEALTH,
   MAX_STORED_MATCH_ERRORS,
   REST_HEAL,
 } from '../constants/gameConstants';
-import { buildFunctionArgs } from '../validation/buildFunctionArgs';
 import { executeUserFunction } from '../validation/executeUserFunction';
 import { evaluateVictory } from '../victory/evaluateVictory';
 import type { Cell, Direction, GameError, Match, NeighborState, OccupancyKey, PlayerId, Position } from '../types/game';
@@ -17,7 +16,6 @@ import type { Cell, Direction, GameError, Match, NeighborState, OccupancyKey, Pl
 export function getTurnOrder(match: Match): Cell[] {
   return match.board.cells
     .filter((cell) => cell.isAlive)
-    .map((cell) => ({ ...cell, position: { ...cell.position } }))
     .sort((left, right) => {
       if (left.creationTurn !== right.creationTurn) return left.creationTurn - right.creationTurn;
       if (left.position.row !== right.position.row) return left.position.row - right.position.row;
@@ -32,7 +30,7 @@ export function executeTurn(match: Match): Match {
   }
 
   const eligibleCells = getTurnOrder(match);
-  const cells = match.board.cells.map((cell) => ({ ...cell, position: { ...cell.position } }));
+  const cells = match.board.cells.slice();
   const occupancy = new Map<OccupancyKey, string>(match.board.occupancy);
   const idToIndex = new Map<string, number>();
   const errors: GameError[] = trimStoredErrors(match.errors);
@@ -58,10 +56,10 @@ export function executeTurn(match: Match): Match {
       continue;
     }
 
-    const args = buildFunctionArgs(
-      currentCell.health,
-      buildNearbyStatesFromWorkingState(currentCell, cells, occupancy, idToIndex),
-    );
+    const args = {
+      health: currentCell.health,
+      nearby: buildNearbyStatesFromWorkingState(currentCell, cells, occupancy, idToIndex),
+    };
     const execution = executeUserFunction(player.functionSource, args);
 
     if (execution.error) {
@@ -107,10 +105,14 @@ export function executeTurn(match: Match): Match {
   }
 
   const livingCells = cells.filter((cell) => cell.isAlive && cell.health > 0);
-  const board = createBoard(livingCells);
   const advancedMatch: Match = {
     ...match,
-    board,
+    board: {
+      rows: match.board.rows,
+      columns: match.board.columns,
+      cells: livingCells,
+      occupancy: new Map(occupancy),
+    },
     errors,
     currentTurn: match.currentTurn + 1,
   };
@@ -313,7 +315,7 @@ function countErrorsByTurn(errors: readonly GameError[]): Map<number, number> {
 }
 
 export function buildNearbyStates(match: Match, cell: Cell): NeighborState[] {
-  return (['n', 's', 'e', 'w', 'ne', 'nw', 'se', 'sw'] as const).map((direction) => {
+  return DIRECTIONS.map((direction) => {
     const position = offsetPosition(cell.position, direction);
 
     if (!isInsideBoard(position)) {
@@ -335,7 +337,7 @@ function buildNearbyStatesFromWorkingState(
   occupancy: ReadonlyMap<OccupancyKey, string>,
   idToIndex: ReadonlyMap<string, number>,
 ): NeighborState[] {
-  return (['n', 's', 'e', 'w', 'ne', 'nw', 'se', 'sw'] as const).map((direction) => {
+  return DIRECTIONS.map((direction) => {
     const position = offsetPosition(cell.position, direction);
 
     if (!isInsideBoard(position)) {

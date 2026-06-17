@@ -59,7 +59,7 @@ export function compileUserFunction(source: string): CompiledUserFunction {
       if (typeof cell !== 'function') {
         throw new Error("cell is not a function.");
       }
-      return cell(health, Object.freeze([...nearby]));
+      return cell(health, nearby);
     `,
   ) as CompiledUserFunction;
 

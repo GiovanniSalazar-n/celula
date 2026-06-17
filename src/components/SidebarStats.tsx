@@ -1,5 +1,5 @@
 import React from 'react';
-import { Cell } from '../types';
+import { type Cell, type PlayerId } from '../engine';
 import { Activity, Target } from 'lucide-react';
 
 interface SidebarStatsProps {
@@ -15,7 +15,8 @@ export const PlayerSidebar: React.FC<SidebarStatsProps> = ({
   color,
   cells,
 }) => {
-  const teamCells = cells.filter(c => c.status === 'alive' && c.team === playerNum);
+  const teamId: PlayerId = playerNum === 1 ? 'player-1' : 'player-2';
+  const teamCells = cells.filter(c => c.isAlive && c.teamId === teamId);
   const livingCount = teamCells.length;
 
   // Group actions to show summary distribution

@@ -1,41 +1,22 @@
-import React, { useRef, useEffect, useMemo, useState } from 'react';
-import { Cell } from '../types';
-import { BOARD_COLUMNS, BOARD_ROWS } from '../engine';
-import { Dna, ZoomIn, ZoomOut, Maximize2 } from 'lucide-react';
+import React, { useRef, useEffect, useState } from 'react';
+import { BOARD_COLUMNS, BOARD_ROWS, type Cell } from '../engine';
+import { Dna } from 'lucide-react';
 
 interface GameBoardProps {
   cells: Cell[];
   p1Color: string;
   p2Color: string;
-  selectedCellId: string | null;
-  onSelectCell: (cell: Cell | null) => void;
 }
 
 export const GameBoard: React.FC<GameBoardProps> = ({
   cells,
   p1Color,
   p2Color,
-  selectedCellId,
-  onSelectCell,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   
   const [dimensions, setDimensions] = useState({ width: 800, height: 400 });
-  const liveCells = useMemo(() => cells.filter(cell => cell.status === 'alive'), [cells]);
-  const cellByCoordinate = useMemo(() => {
-    const index = new Map<string, Cell>();
-
-    for (const cell of liveCells) {
-      index.set(toCoordinateKey(cell.row, cell.col), cell);
-    }
-
-    return index;
-  }, [liveCells]);
-  const selectedCell = useMemo(
-    () => selectedCellId ? liveCells.find(cell => cell.id === selectedCellId) : null,
-    [liveCells, selectedCellId],
-  );
 
   // Set up ResizeObserver to scale the canvas automatically
   useEffect(() => {
@@ -99,71 +80,16 @@ export const GameBoard: React.FC<GameBoardProps> = ({
     ctx.stroke();
 
     // 2. Draw all cells
-    liveCells.forEach(cell => {
-      const x = cell.col * cellW;
-      const y = cell.row * cellH;
-      const color = cell.team === 1 ? p1Color : p2Color;
+    cells.forEach(cell => {
+      if (!cell.isAlive) return;
 
-      // Draw glowing cell dot
-      ctx.fillStyle = color;
-      ctx.shadowBlur = 4;
-      ctx.shadowColor = color;
-      
-      // Draw nicely rounded dot or square
+      const x = cell.position.column * cellW;
+      const y = cell.position.row * cellH;
+
+      ctx.fillStyle = cell.color;
       ctx.fillRect(x + 0.5, y + 0.5, cellW - 0.5, cellH - 0.5);
-      
-      // Reset shadows
-      ctx.shadowBlur = 0;
     });
-
-    // 3. Highlight selected cell
-    if (selectedCell) {
-      const x = selectedCell.col * cellW;
-      const y = selectedCell.row * cellH;
-      const color = selectedCell.team === 1 ? p1Color : p2Color;
-
-      // Glowing targeting reticle
-      ctx.strokeStyle = '#ffffff';
-      ctx.lineWidth = 1.5;
-      ctx.strokeRect(x - 2, y - 2, cellW + 4, cellH + 4);
-
-      // Animated crosshairs
-      ctx.strokeStyle = color;
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      // Crosshair horizontal
-      ctx.moveTo(x - 6, y + cellH/2);
-      ctx.lineTo(x + cellW + 6, y + cellH/2);
-      // Vertical
-      ctx.moveTo(x + cellW/2, y - 6);
-      ctx.lineTo(x + cellW/2, y + cellH + 6);
-      ctx.stroke();
-    }
-  }, [liveCells, dimensions, p1Color, p2Color, selectedCell]);
-
-  // Click handler to select cells
-  const handleCanvasClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    const rect = canvas.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-
-    const cellW = dimensions.width / BOARD_COLUMNS;
-    const cellH = dimensions.height / BOARD_ROWS;
-
-    const col = Math.floor(x / cellW);
-    const row = Math.floor(y / cellH);
-
-    // Lock limits
-    const boundedCol = Math.max(0, Math.min(BOARD_COLUMNS - 1, col));
-    const boundedRow = Math.max(0, Math.min(BOARD_ROWS - 1, row));
-
-    const clickedCell = cellByCoordinate.get(toCoordinateKey(boundedRow, boundedCol)) || null;
-
-    onSelectCell(clickedCell);
-  };
+  }, [cells, dimensions]);
 
   return (
     <div className="relative flex flex-col bg-slate-900 border border-slate-700/60 rounded-xl overflow-hidden p-3 shadow-xl">
@@ -188,12 +114,11 @@ export const GameBoard: React.FC<GameBoardProps> = ({
           ref={canvasRef}
           width={dimensions.width}
           height={dimensions.height}
-          onClick={handleCanvasClick}
           className="block w-full h-full"
         />
 
         {/* Floating instruction when board is empty */}
-        {liveCells.length === 0 && (
+        {cells.length === 0 && (
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4 text-center">
             <Dna className="h-10 w-10 text-cyan-400 animate-pulse mb-2" />
             <p className="text-sm font-semibold text-slate-200 font-sans">BIO-COLLISION FIELD CLEAN</p>
@@ -204,7 +129,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({
 
       {/* Footer helpers */}
       <div className="flex justify-between items-center mt-2 text-[10px] font-mono text-slate-500">
-        <span>CLICK A MEMBRANE DOT TO MARK A CELL ON THE BOARD</span>
+        <span>LOCAL TWO-PLAYER CELL FIELD RENDER</span>
         <div className="flex gap-2">
           <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-slate-800 border border-slate-700"></span> Empty Grid</span>
           <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm" style={{ backgroundColor: p1Color }}></span> Team 1</span>
@@ -214,7 +139,3 @@ export const GameBoard: React.FC<GameBoardProps> = ({
     </div>
   );
 };
-
-function toCoordinateKey(row: number, col: number): string {
-  return `${row}:${col}`;
-}

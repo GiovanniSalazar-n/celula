@@ -8,7 +8,7 @@ import {
   type MatchResult,
   type Player,
 } from './engine';
-import { Cell, PlayerConfig, SimulationSettings, LogEntry, GameState, FinalStats } from './types';
+import { PlayerConfig, SimulationSettings, LogEntry, GameState, FinalStats } from './types';
 import { CODE_TEMPLATES } from './utils/interpreter';
 import { CodeEditor } from './components/CodeEditor';
 import { GameBoard } from './components/GameBoard';
@@ -19,6 +19,7 @@ import { FinalResults } from './components/FinalResults';
 import { Dna, ArrowLeft } from 'lucide-react';
 
 const MAX_LOG_ENTRIES = 150;
+const MIN_RENDER_INTERVAL_MS = 250;
 
 const PLAYBACK_PROFILES = {
   1: { turnDelayMs: 500, frameBudgetMs: 4, maxTurnsPerFrame: 1 },
@@ -57,16 +58,17 @@ export default function App() {
     turnDelay: 250,
   });
   const [logs, setLogs] = useState<LogEntry[]>([]);
-  const [selectedCellId, setSelectedCellId] = useState<string | null>(null);
   const [finalStats, setFinalStats] = useState<FinalStats | null>(null);
   const animationFrameRef = useRef<number | null>(null);
   const lastFrameTimeRef = useRef<number | null>(null);
+  const lastRenderCommitTimeRef = useRef(0);
   const accumulatedPlaybackTimeRef = useRef(0);
+  const pendingLogsRef = useRef<LogEntry[]>([]);
   const matchRef = useRef<Match | null>(null);
   const gameStateRef = useRef<GameState>('setup');
   const settingsRef = useRef<SimulationSettings>(settings);
 
-  const cells = useMemo(() => (match ? match.board.cells.map(toUiCell) : []), [match]);
+  const cells = useMemo(() => match?.board.cells ?? [], [match]);
   const currentTurn = match?.currentTurn ?? 0;
 
   useEffect(() => {
@@ -91,6 +93,18 @@ export default function App() {
     setLogs(prev => [...prev, ...newLogs].slice(-MAX_LOG_ENTRIES));
   };
 
+  const queueLogs = (newLogs: LogEntry[]) => {
+    if (newLogs.length === 0) return;
+    pendingLogsRef.current = [...pendingLogsRef.current, ...newLogs].slice(-MAX_LOG_ENTRIES);
+  };
+
+  const flushQueuedLogs = () => {
+    if (pendingLogsRef.current.length === 0) return;
+    const queuedLogs = pendingLogsRef.current;
+    pendingLogsRef.current = [];
+    appendLogs(queuedLogs);
+  };
+
   const cancelPlaybackFrame = () => {
     if (animationFrameRef.current !== null) {
       cancelAnimationFrame(animationFrameRef.current);
@@ -98,18 +112,20 @@ export default function App() {
     }
 
     lastFrameTimeRef.current = null;
+    lastRenderCommitTimeRef.current = 0;
     accumulatedPlaybackTimeRef.current = 0;
   };
 
   const handleStartSimulation = () => {
     const newMatch = createInitialMatch([toEnginePlayer(p1, 'player-1'), toEnginePlayer(p2, 'player-2')]);
 
+    matchRef.current = newMatch;
+    pendingLogsRef.current = [];
     setMatch(newMatch);
     setLogs([
       { turn: 1, type: 'system', message: 'MVP match locked. Random initial cells placed on the fixed 100 x 200 board.' },
       { turn: 1, type: 'info', message: `${p1.name} vs ${p2.name} - fixed turn limit: ${TURN_LIMIT}` },
     ]);
-    setSelectedCellId(null);
     setFinalStats(null);
     setScreen('simulation');
     setGameState('paused');
@@ -195,8 +211,16 @@ export default function App() {
 
       if (executedTurns > 0 && workingMatch) {
         matchRef.current = workingMatch;
-        setMatch(workingMatch);
-        appendLogs(newLogs);
+        const shouldCommitRender = finishedResult || timestamp - lastRenderCommitTimeRef.current >= MIN_RENDER_INTERVAL_MS;
+
+        if (shouldCommitRender) {
+          lastRenderCommitTimeRef.current = timestamp;
+          setMatch(workingMatch);
+          queueLogs(newLogs);
+          flushQueuedLogs();
+        } else {
+          queueLogs(newLogs);
+        }
 
         if (finishedResult) {
           setGameState('finished');
@@ -220,35 +244,44 @@ export default function App() {
   const handleTogglePlay = () => {
     if (gameState === 'finished') return;
     const nextState = gameState === 'running' ? 'paused' : 'running';
+    if (nextState === 'paused') {
+      flushQueuedLogs();
+    }
     setGameState(nextState);
-    setMatch(prev => prev ? { ...prev, status: nextState === 'running' ? 'running' : 'paused' } : prev);
+    setMatch(prev => {
+      const currentMatch = matchRef.current ?? prev;
+      return currentMatch ? { ...currentMatch, status: nextState === 'running' ? 'running' : 'paused' } : currentMatch;
+    });
   };
 
   const handleResetMatch = () => {
     cancelPlaybackFrame();
 
     const newMatch = createInitialMatch([toEnginePlayer(p1, 'player-1'), toEnginePlayer(p2, 'player-2')]);
+    matchRef.current = newMatch;
+    pendingLogsRef.current = [];
     setMatch(newMatch);
     setLogs([{ turn: 1, type: 'system', message: 'Simulation reloaded with newly random initial placement.' }]);
-    setSelectedCellId(null);
     setFinalStats(null);
     setGameState('paused');
   };
 
   const handleEndSimulation = () => {
-    if (!match) return;
+    const currentMatch = matchRef.current ?? match;
+    if (!currentMatch) return;
 
     cancelPlaybackFrame();
 
-    const result = evaluateVictory(match, 'manual-end');
+    const result = evaluateVictory(currentMatch, 'manual-end');
     if (!result) return;
 
-    setMatch({ ...match, status: 'finished', result });
+    pendingLogsRef.current = [];
+    setMatch({ ...currentMatch, status: 'finished', result });
     setGameState('finished');
     setFinalStats(toFinalStats(result));
     appendLogs([
       {
-        turn: match.currentTurn,
+        turn: currentMatch.currentTurn,
         type: 'system',
         message: 'Simulation manually ended. Leader evaluated by living cells, then total health.',
       },
@@ -258,12 +291,12 @@ export default function App() {
 
   const handleBackToSetup = () => {
     cancelPlaybackFrame();
+    matchRef.current = null;
+    pendingLogsRef.current = [];
     setMatch(null);
     setGameState('setup');
     setScreen('setup');
   };
-
-  const selectedCell = cells.find(c => c.id === selectedCellId) || null;
 
   return (
     <div className="min-h-screen bg-[#070b14] text-slate-100 flex flex-col font-sans select-none antialiased">
@@ -329,8 +362,6 @@ export default function App() {
                   cells={cells}
                   p1Color={p1.color}
                   p2Color={p2.color}
-                  selectedCellId={selectedCellId}
-                  onSelectCell={(c) => setSelectedCellId(c ? c.id : null)}
                 />
               </div>
 
@@ -373,20 +404,6 @@ function toEnginePlayer(config: PlayerConfig, id: Player['id']): Player {
     isFunctionValid: config.isValid,
     validationError: config.validationError || undefined,
     isConfirmed: config.isValid,
-  };
-}
-
-function toUiCell(cell: Match['board']['cells'][number]): Cell {
-  return {
-    id: cell.id,
-    team: cell.teamId === 'player-1' ? 1 : 2,
-    row: cell.position.row,
-    col: cell.position.column,
-    life: cell.health,
-    creationTurn: cell.creationTurn,
-    lastAction: cell.lastAction || 'none',
-    lastActionStatus: cell.lastActionStatus || 'none',
-    status: cell.isAlive ? 'alive' : 'dead',
   };
 }
 
