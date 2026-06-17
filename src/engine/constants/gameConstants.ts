@@ -11,6 +11,8 @@ import type {
 export const BOARD_ROWS = 100;
 export const BOARD_COLUMNS = 200;
 export const TURN_LIMIT = 5000;
+export const MIN_TURN_LIMIT = 1;
+export const MAX_TURN_LIMIT = 10000;
 export const MAX_HEALTH = 100;
 export const EAT_DAMAGE = 5;
 export const REST_HEAL = 3;

@@ -131,7 +131,7 @@ export interface Match {
   players: readonly [Player, Player];
   board: Board;
   currentTurn: number;
-  turnLimit: 5000;
+  turnLimit: number;
   status: MatchStatus;
   isLocked: boolean;
   errors: GameError[];

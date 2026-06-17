@@ -16,18 +16,18 @@
 
 ### Tests for User Story 5
 
-- [ ] T001 [P] [US5] Add turn-limit configuration tests for 1, 5000, 10000, and out-of-range values in `src/tests/engine/playerConfig.test.ts`
-- [ ] T002 [P] [US5] Add match-lock tests proving turn limit cannot change after Play in `src/tests/engine/matchLock.test.ts`
-- [ ] T003 [P] [US5] Add selected-final-turn victory tests in `src/tests/engine/evaluateVictory.test.ts`
-- [ ] T004 [P] [US5] Add configuration UI tests for turn selector display, validation, and locking in `src/tests/ui/configurationScreen.test.tsx`
+- [X] T001 [P] [US5] Add turn-limit configuration tests for 1, 5000, 10000, and out-of-range values in `src/tests/engine/playerConfig.test.ts`
+- [X] T002 [P] [US5] Add match-lock tests proving turn limit cannot change after Play in `src/tests/engine/matchLock.test.ts`
+- [X] T003 [P] [US5] Add selected-final-turn victory tests in `src/tests/engine/evaluateVictory.test.ts`
+- [X] T004 [P] [US5] Add configuration UI tests for turn selector display, validation, and locking in `src/tests/ui/configurationScreen.test.tsx`
 
 ### Implementation for User Story 5
 
-- [ ] T005 [US5] Add turn-limit constants and type fields in `src/engine/constants/gameConstants.ts` and `src/engine/types/game.ts`
-- [ ] T006 [US5] Validate turn limit in player or match configuration flow in `src/engine/validation/validatePlayerConfig.ts`
-- [ ] T007 [US5] Persist selected turn limit during match creation and lock it after Play in `src/engine/match/createInitialMatch.ts` and `src/engine/match/matchState.ts`
-- [ ] T008 [US5] Evaluate turn-limit victory using selected turn limit in `src/engine/victory/evaluateVictory.ts`
-- [ ] T009 [US5] Add the existing-style turn selector control in `src/App.tsx` and `src/components/ControlBar.tsx`
+- [X] T005 [US5] Add turn-limit constants and type fields in `src/engine/constants/gameConstants.ts` and `src/engine/types/game.ts`
+- [X] T006 [US5] Validate turn limit in player or match configuration flow in `src/engine/validation/validatePlayerConfig.ts`
+- [X] T007 [US5] Persist selected turn limit during match creation and lock it after Play in `src/engine/match/createInitialMatch.ts` and `src/engine/match/matchState.ts`
+- [X] T008 [US5] Evaluate turn-limit victory using selected turn limit in `src/engine/victory/evaluateVictory.ts`
+- [X] T009 [US5] Add the existing-style turn selector control in `src/App.tsx` and `src/components/ControlBar.tsx`
 
 **Checkpoint**: Turn selector works independently and does not change any game action rule.
 

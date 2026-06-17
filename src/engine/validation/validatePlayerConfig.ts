@@ -1,4 +1,5 @@
 import type { Player, PlayerId } from '../types/game';
+import { MAX_TURN_LIMIT, MIN_TURN_LIMIT } from '../constants/gameConstants';
 
 export type PlayerConfigValidationField =
   | 'players'
@@ -17,6 +18,11 @@ export interface PlayerConfigValidationError {
 export interface PlayerConfigValidationResult {
   isValid: boolean;
   errors: PlayerConfigValidationError[];
+}
+
+export interface TurnLimitValidationResult {
+  isValid: boolean;
+  error: string | null;
 }
 
 export interface PlayerConfigValidationOptions {
@@ -94,5 +100,26 @@ export function validatePlayerConfigs(
   return {
     isValid: errors.length === 0,
     errors,
+  };
+}
+
+export function validateTurnLimit(turnLimit: number): TurnLimitValidationResult {
+  if (!Number.isInteger(turnLimit)) {
+    return {
+      isValid: false,
+      error: 'Turn limit must be a whole number.',
+    };
+  }
+
+  if (turnLimit < MIN_TURN_LIMIT || turnLimit > MAX_TURN_LIMIT) {
+    return {
+      isValid: false,
+      error: `Turn limit must be between ${MIN_TURN_LIMIT} and ${MAX_TURN_LIMIT}.`,
+    };
+  }
+
+  return {
+    isValid: true,
+    error: null,
   };
 }

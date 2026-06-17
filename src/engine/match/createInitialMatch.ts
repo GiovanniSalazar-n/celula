@@ -8,9 +8,11 @@ import {
 import { createBoard } from '../board/createBoard';
 import { positionKey } from '../board/position';
 import type { Cell, Match, OccupancyKey, Player, Position } from '../types/game';
+import { validateTurnLimit } from '../validation/validatePlayerConfig';
 
 export interface CreateInitialMatchOptions {
   random?: () => number;
+  turnLimit?: number;
 }
 
 export function createInitialMatch(
@@ -18,6 +20,11 @@ export function createInitialMatch(
   options: CreateInitialMatchOptions = {},
 ): Match {
   const random = options.random ?? Math.random;
+  const turnLimit = options.turnLimit ?? TURN_LIMIT;
+  const turnLimitValidation = validateTurnLimit(turnLimit);
+  if (!turnLimitValidation.isValid) {
+    throw new Error(turnLimitValidation.error ?? 'Invalid turn limit.');
+  }
   const usedPositions = new Set<OccupancyKey>();
 
   const cells: Cell[] = players.map((player) => {
@@ -40,7 +47,7 @@ export function createInitialMatch(
     players,
     board: createBoard(cells),
     currentTurn: 1,
-    turnLimit: TURN_LIMIT,
+    turnLimit,
     status: 'paused',
     isLocked: true,
     errors: [],

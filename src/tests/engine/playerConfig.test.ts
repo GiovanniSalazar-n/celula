@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Player } from '../../engine';
-import { validatePlayerConfigs } from '../../engine';
+import { validatePlayerConfigs, validateTurnLimit } from '../../engine';
 import { playerOneFixture, playerTwoFixture } from '../fixtures/gameFixtures';
 
 function player(overrides: Partial<Player> = {}): Player {
@@ -113,5 +113,26 @@ describe('validatePlayerConfigs', () => {
 
     expect(result.isValid).toBe(true);
     expect(result.errors).toEqual([]);
+  });
+
+  it('accepts turn limits from 1 to 10000', () => {
+    expect(validateTurnLimit(1)).toEqual({ isValid: true, error: null });
+    expect(validateTurnLimit(5000)).toEqual({ isValid: true, error: null });
+    expect(validateTurnLimit(10000)).toEqual({ isValid: true, error: null });
+  });
+
+  it('rejects turn limits outside 1 to 10000', () => {
+    expect(validateTurnLimit(0)).toEqual({
+      isValid: false,
+      error: 'Turn limit must be between 1 and 10000.',
+    });
+    expect(validateTurnLimit(10001)).toEqual({
+      isValid: false,
+      error: 'Turn limit must be between 1 and 10000.',
+    });
+    expect(validateTurnLimit(1.5)).toEqual({
+      isValid: false,
+      error: 'Turn limit must be a whole number.',
+    });
   });
 });

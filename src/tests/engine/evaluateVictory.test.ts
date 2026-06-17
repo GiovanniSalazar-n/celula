@@ -36,4 +36,14 @@ describe('evaluateVictory', () => {
     ]);
     expect(evaluateVictory(exactTie, 'manual-end')?.isDraw).toBe(true);
   });
+
+  it('uses the selected turn limit before evaluating turn-limit victory', () => {
+    const ongoing = createMatchFixture([cellOneFixture, cellTwoFixture]);
+
+    expect(evaluateVictory({ ...ongoing, currentTurn: 10000, turnLimit: 10000 })).toBeUndefined();
+
+    const afterSelectedLimit = evaluateVictory({ ...ongoing, currentTurn: 10001, turnLimit: 10000 });
+    expect(afterSelectedLimit?.terminationCause).toBe('turn-limit');
+    expect(afterSelectedLimit?.finalTurn).toBe(10000);
+  });
 });

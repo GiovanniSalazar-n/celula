@@ -4,6 +4,7 @@ import {
   evaluateVictory,
   executeTurn,
   TURN_LIMIT,
+  validateTurnLimit,
   type Match,
   type MatchResult,
   type Player,
@@ -75,7 +76,7 @@ export default function App() {
 
   useEffect(() => {
     const delay = PLAYBACK_PROFILES[settings.speed].turnDelayMs;
-    setSettings(prev => ({ ...prev, maxTurns: TURN_LIMIT, turnDelay: delay }));
+    setSettings(prev => ({ ...prev, turnDelay: delay }));
   }, [settings.speed]);
 
   useEffect(() => {
@@ -119,14 +120,22 @@ export default function App() {
   };
 
   const handleStartSimulation = () => {
-    const newMatch = createInitialMatch([toEnginePlayer(p1, 'player-1'), toEnginePlayer(p2, 'player-2')]);
+    const turnLimitValidation = validateTurnLimit(settings.maxTurns);
+    if (!turnLimitValidation.isValid) {
+      return;
+    }
+
+    const newMatch = createInitialMatch(
+      [toEnginePlayer(p1, 'player-1'), toEnginePlayer(p2, 'player-2')],
+      { turnLimit: settings.maxTurns },
+    );
 
     matchRef.current = newMatch;
     pendingLogsRef.current = [];
     setMatch(newMatch);
     setLogs([
       { turn: 1, type: 'system', message: 'MVP match locked. Random initial cells placed on the fixed 100 x 200 board.' },
-      { turn: 1, type: 'info', message: `${p1.name} vs ${p2.name} - fixed turn limit: ${TURN_LIMIT}` },
+      { turn: 1, type: 'info', message: `${p1.name} vs ${p2.name} - turn limit: ${newMatch.turnLimit}` },
     ]);
     setFinalStats(null);
     setScreen('simulation');
@@ -262,7 +271,10 @@ export default function App() {
   const handleResetMatch = () => {
     cancelPlaybackFrame();
 
-    const newMatch = createInitialMatch([toEnginePlayer(p1, 'player-1'), toEnginePlayer(p2, 'player-2')]);
+    const newMatch = createInitialMatch(
+      [toEnginePlayer(p1, 'player-1'), toEnginePlayer(p2, 'player-2')],
+      { turnLimit: settingsRef.current.maxTurns },
+    );
     matchRef.current = newMatch;
     pendingLogsRef.current = [];
     setMatch(newMatch);

@@ -1,7 +1,14 @@
 import React from 'react';
 import { PlayerConfig, SimulationSettings } from '../types';
 import { CODE_TEMPLATES } from '../utils/interpreter';
-import { validateUserFunction, validatePlayerConfigs, type Player } from '../engine';
+import {
+  MAX_TURN_LIMIT,
+  MIN_TURN_LIMIT,
+  validateUserFunction,
+  validatePlayerConfigs,
+  validateTurnLimit,
+  type Player,
+} from '../engine';
 import { Play, Check, AlertTriangle, Code2, BookOpen, Settings2, Sparkles } from 'lucide-react';
 
 interface CodeEditorProps {
@@ -132,7 +139,8 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
     ],
     { requireConfirmed: false },
   );
-  const canStart = playValidation.isValid;
+  const turnLimitValidation = validateTurnLimit(settings.maxTurns);
+  const canStart = playValidation.isValid && turnLimitValidation.isValid;
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto px-4 py-4 font-sans text-slate-100">
@@ -401,10 +409,27 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
               </div>
 
               <div>
-                <label className="block text-slate-400 mb-1">TERMINATION</label>
-                <div className="w-full bg-slate-950 border border-slate-850 rounded px-2 py-1.5 text-white">
-                  5,000 turns fixed
-                </div>
+                <label htmlFor="turn-limit-input" className="block text-slate-400 mb-1">TURN LIMIT</label>
+                <input
+                  id="turn-limit-input"
+                  type="number"
+                  min={MIN_TURN_LIMIT}
+                  max={MAX_TURN_LIMIT}
+                  step={1}
+                  value={settings.maxTurns}
+                  onChange={event => {
+                    const nextValue = Number(event.target.value);
+                    setSettings(prev => ({
+                      ...prev,
+                      maxTurns: Number.isFinite(nextValue) ? nextValue : prev.maxTurns,
+                    }));
+                  }}
+                  className="w-full bg-slate-950 border border-slate-850 rounded px-2 py-1.5 text-white focus:outline-none focus:ring-1 focus:ring-cyan-500"
+                />
+                <p className="mt-1 text-[10px] text-slate-500">1-10,000. Locks after Play.</p>
+                {!turnLimitValidation.isValid && (
+                  <p className="mt-1 text-[10px] text-rose-400">{turnLimitValidation.error}</p>
+                )}
               </div>
             </div>
           </div>

@@ -66,4 +66,17 @@ describe('configuration screen Play gate', () => {
     fireEvent.click(startButton);
     expect(onStartSimulation).toHaveBeenCalledTimes(1);
   });
+
+  it('shows a turn selector that accepts values from 1 to 10000 before Play', () => {
+    render(<Harness />);
+
+    const turnInput = screen.getByLabelText(/turn limit/i);
+    expect(turnInput).toHaveValue(5000);
+
+    fireEvent.change(turnInput, { target: { value: '10000' } });
+    expect(turnInput).toHaveValue(10000);
+
+    fireEvent.change(turnInput, { target: { value: '1' } });
+    expect(turnInput).toHaveValue(1);
+  });
 });
