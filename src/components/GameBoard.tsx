@@ -22,7 +22,6 @@ export const GameBoard: React.FC<GameBoardProps> = ({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   
   const [dimensions, setDimensions] = useState({ width: 800, height: 400 });
-  const [hoveredCell, setHoveredCell] = useState<{ row: number; col: number; cell: Cell | null } | null>(null);
   const liveCells = useMemo(() => cells.filter(cell => cell.status === 'alive'), [cells]);
   const cellByCoordinate = useMemo(() => {
     const index = new Map<string, Cell>();
@@ -166,37 +165,6 @@ export const GameBoard: React.FC<GameBoardProps> = ({
     onSelectCell(clickedCell);
   };
 
-  // Mousemove handler for hover overlay coordinates
-  const handleCanvasMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    const rect = canvas.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-
-    const cellW = dimensions.width / BOARD_COLUMNS;
-    const cellH = dimensions.height / BOARD_ROWS;
-
-    const col = Math.floor(x / cellW);
-    const row = Math.floor(y / cellH);
-
-    const boundedCol = Math.max(0, Math.min(BOARD_COLUMNS - 1, col));
-    const boundedRow = Math.max(0, Math.min(BOARD_ROWS - 1, row));
-
-    const foundCell = cellByCoordinate.get(toCoordinateKey(boundedRow, boundedCol)) || null;
-
-    setHoveredCell({
-      row: boundedRow,
-      col: boundedCol,
-      cell: foundCell,
-    });
-  };
-
-  const handleCanvasMouseLeave = () => {
-    setHoveredCell(null);
-  };
-
   return (
     <div className="relative flex flex-col bg-slate-900 border border-slate-700/60 rounded-xl overflow-hidden p-3 shadow-xl">
       {/* Header telemetry and grid indicators */}
@@ -206,16 +174,6 @@ export const GameBoard: React.FC<GameBoardProps> = ({
           <span>MATRIX RESOLUTION: 200 x 100 CYTOS-COORDS</span>
         </div>
         <div className="flex items-center gap-4">
-          {hoveredCell && (
-            <span className="text-cyan-400">
-              HOVER: R{hoveredCell.row} C{hoveredCell.col} 
-              {hoveredCell.cell && (
-                <span className="ml-[6px]" style={{ color: hoveredCell.cell.team === 1 ? p1Color : p2Color }}>
-                  [T{hoveredCell.cell.team} Cell - HP: {hoveredCell.cell.life}]
-                </span>
-              )}
-            </span>
-          )}
           <span className="text-slate-500">ZOOM: FIT (100%)</span>
         </div>
       </div>
@@ -231,8 +189,6 @@ export const GameBoard: React.FC<GameBoardProps> = ({
           width={dimensions.width}
           height={dimensions.height}
           onClick={handleCanvasClick}
-          onMouseMove={handleCanvasMouseMove}
-          onMouseLeave={handleCanvasMouseLeave}
           className="block w-full h-full"
         />
 
@@ -248,7 +204,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({
 
       {/* Footer helpers */}
       <div className="flex justify-between items-center mt-2 text-[10px] font-mono text-slate-500">
-        <span>HOVER OVER MEMBRANE DOTS TO VIEW POSITION COORDINATES AND STATUS HP</span>
+        <span>CLICK A MEMBRANE DOT TO MARK A CELL ON THE BOARD</span>
         <div className="flex gap-2">
           <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-slate-800 border border-slate-700"></span> Empty Grid</span>
           <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm" style={{ backgroundColor: p1Color }}></span> Team 1</span>

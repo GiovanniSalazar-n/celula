@@ -1,6 +1,6 @@
 import React from 'react';
 import { Cell } from '../types';
-import { Shield, Sparkles, Heart, Clock, Activity, Target } from 'lucide-react';
+import { Activity, Target } from 'lucide-react';
 
 interface SidebarStatsProps {
   playerNum: 1 | 2;
@@ -17,13 +17,6 @@ export const PlayerSidebar: React.FC<SidebarStatsProps> = ({
 }) => {
   const teamCells = cells.filter(c => c.status === 'alive' && c.team === playerNum);
   const livingCount = teamCells.length;
-  const totalLife = teamCells.reduce((acc, c) => acc + c.life, 0);
-  const averageLife = livingCount > 0 ? Math.round(totalLife / livingCount) : 0;
-  
-  const firstCreatedCell = teamCells.reduce((earliest: Cell | null, current: Cell) => {
-    if (!earliest) return current;
-    return current.creationTurn < earliest.creationTurn ? current : earliest;
-  }, null as Cell | null);
 
   // Group actions to show summary distribution
   const actionCounts: Record<string, number> = {};
@@ -52,56 +45,14 @@ export const PlayerSidebar: React.FC<SidebarStatsProps> = ({
       </div>
 
       {/* Main Stats Bento-grid */}
-      <div className="grid grid-cols-2 gap-2 text-xs font-mono font-bold">
+      <div className="grid grid-cols-1 gap-2 text-xs font-mono font-bold">
         {/* Cell Count */}
         <div className="bg-slate-950 border border-slate-850 p-2.5 rounded-lg flex flex-col gap-1">
           <span className="text-[10px] text-slate-500 flex items-center gap-1">
             <Activity className="h-3 w-3 text-cyan-400" />
             LIVING NODES
           </span>
-          <span className="text-xl font-extrabold text-white">{livingCount}</span>
-        </div>
-
-        {/* Total Life Pool */}
-        <div className="bg-slate-950 border border-slate-850 p-2.5 rounded-lg flex flex-col gap-1">
-          <span className="text-[10px] text-slate-500 flex items-center gap-1">
-            <Heart className="h-3 w-3 text-rose-500" />
-            LIFE TOTAL
-          </span>
-          <span className="text-xl font-extrabold text-white">{totalLife}</span>
-        </div>
-
-        {/* Avg HP */}
-        <div className="bg-slate-950 border border-slate-850 p-2.5 rounded-lg flex flex-col gap-1 col-span-2">
-          <span className="text-[10px] text-slate-500 flex items-center justify-between">
-            <span className="flex items-center gap-1">
-              <Shield className="h-3 w-3 text-emerald-400" />
-              AVERAGE VITALITY
-            </span>
-            <span>{averageLife}%</span>
-          </span>
-          <div className="w-full bg-slate-900 rounded-full h-1.5 mt-1 overflow-hidden">
-            <div 
-              className="h-full rounded-full transition-all duration-300" 
-              style={{ width: `${averageLife}%`, backgroundColor: color }}
-            ></div>
-          </div>
-        </div>
-
-        {/* First created living cell */}
-        <div className="bg-slate-950 border border-slate-850 p-2.5 rounded-lg flex flex-col gap-1 col-span-2">
-          <span className="text-[10px] text-slate-500 flex items-center gap-1">
-            <Clock className="h-3 w-3 text-indigo-400" />
-            FIRST CREATED NODE
-          </span>
-          {firstCreatedCell ? (
-            <div className="flex justify-between items-center text-white">
-              <span>#{firstCreatedCell.id.split('-').pop() || '01'}</span>
-              <span>TURN {firstCreatedCell.creationTurn}</span>
-            </div>
-          ) : (
-            <span className="text-slate-600 italic">None registered</span>
-          )}
+          <span className="text-3xl font-extrabold text-white">{livingCount}</span>
         </div>
       </div>
 
