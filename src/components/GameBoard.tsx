@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect, useMemo, useState } from 'react';
 import { Cell } from '../types';
 import { BOARD_COLUMNS, BOARD_ROWS } from '../engine';
 import { Dna, ZoomIn, ZoomOut, Maximize2 } from 'lucide-react';
@@ -23,6 +23,20 @@ export const GameBoard: React.FC<GameBoardProps> = ({
   
   const [dimensions, setDimensions] = useState({ width: 800, height: 400 });
   const [hoveredCell, setHoveredCell] = useState<{ row: number; col: number; cell: Cell | null } | null>(null);
+  const liveCells = useMemo(() => cells.filter(cell => cell.status === 'alive'), [cells]);
+  const cellByCoordinate = useMemo(() => {
+    const index = new Map<string, Cell>();
+
+    for (const cell of liveCells) {
+      index.set(toCoordinateKey(cell.row, cell.col), cell);
+    }
+
+    return index;
+  }, [liveCells]);
+  const selectedCell = useMemo(
+    () => selectedCellId ? liveCells.find(cell => cell.id === selectedCellId) : null,
+    [liveCells, selectedCellId],
+  );
 
   // Set up ResizeObserver to scale the canvas automatically
   useEffect(() => {
@@ -86,9 +100,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({
     ctx.stroke();
 
     // 2. Draw all cells
-    cells.forEach(cell => {
-      if (cell.status !== 'alive') return;
-
+    liveCells.forEach(cell => {
       const x = cell.col * cellW;
       const y = cell.row * cellH;
       const color = cell.team === 1 ? p1Color : p2Color;
@@ -106,32 +118,29 @@ export const GameBoard: React.FC<GameBoardProps> = ({
     });
 
     // 3. Highlight selected cell
-    if (selectedCellId) {
-      const selectedCell = cells.find(c => c.id === selectedCellId && c.status === 'alive');
-      if (selectedCell) {
-        const x = selectedCell.col * cellW;
-        const y = selectedCell.row * cellH;
-        const color = selectedCell.team === 1 ? p1Color : p2Color;
+    if (selectedCell) {
+      const x = selectedCell.col * cellW;
+      const y = selectedCell.row * cellH;
+      const color = selectedCell.team === 1 ? p1Color : p2Color;
 
-        // Glowing targeting reticle
-        ctx.strokeStyle = '#ffffff';
-        ctx.lineWidth = 1.5;
-        ctx.strokeRect(x - 2, y - 2, cellW + 4, cellH + 4);
+      // Glowing targeting reticle
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(x - 2, y - 2, cellW + 4, cellH + 4);
 
-        // Animated crosshairs
-        ctx.strokeStyle = color;
-        ctx.lineWidth = 1;
-        ctx.beginPath();
-        // Crosshair horizontal
-        ctx.moveTo(x - 6, y + cellH/2);
-        ctx.lineTo(x + cellW + 6, y + cellH/2);
-        // Vertical
-        ctx.moveTo(x + cellW/2, y - 6);
-        ctx.lineTo(x + cellW/2, y + cellH + 6);
-        ctx.stroke();
-      }
+      // Animated crosshairs
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      // Crosshair horizontal
+      ctx.moveTo(x - 6, y + cellH/2);
+      ctx.lineTo(x + cellW + 6, y + cellH/2);
+      // Vertical
+      ctx.moveTo(x + cellW/2, y - 6);
+      ctx.lineTo(x + cellW/2, y + cellH + 6);
+      ctx.stroke();
     }
-  }, [cells, dimensions, p1Color, p2Color, selectedCellId]);
+  }, [liveCells, dimensions, p1Color, p2Color, selectedCell]);
 
   // Click handler to select cells
   const handleCanvasClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
@@ -152,16 +161,9 @@ export const GameBoard: React.FC<GameBoardProps> = ({
     const boundedCol = Math.max(0, Math.min(BOARD_COLUMNS - 1, col));
     const boundedRow = Math.max(0, Math.min(BOARD_ROWS - 1, row));
 
-    // Find if an alive cell exists on coordinates
-    const clickedCell = cells.find(
-      c => c.row === boundedRow && c.col === boundedCol && c.status === 'alive'
-    );
+    const clickedCell = cellByCoordinate.get(toCoordinateKey(boundedRow, boundedCol)) || null;
 
-    if (clickedCell) {
-      onSelectCell(clickedCell);
-    } else {
-      onSelectCell(null);
-    }
+    onSelectCell(clickedCell);
   };
 
   // Mousemove handler for hover overlay coordinates
@@ -182,14 +184,12 @@ export const GameBoard: React.FC<GameBoardProps> = ({
     const boundedCol = Math.max(0, Math.min(BOARD_COLUMNS - 1, col));
     const boundedRow = Math.max(0, Math.min(BOARD_ROWS - 1, row));
 
-    const foundCell = cells.find(
-      c => c.row === boundedRow && c.col === boundedCol && c.status === 'alive'
-    );
+    const foundCell = cellByCoordinate.get(toCoordinateKey(boundedRow, boundedCol)) || null;
 
     setHoveredCell({
       row: boundedRow,
       col: boundedCol,
-      cell: foundCell || null
+      cell: foundCell,
     });
   };
 
@@ -237,7 +237,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({
         />
 
         {/* Floating instruction when board is empty */}
-        {cells.filter(c => c.status === 'alive').length === 0 && (
+        {liveCells.length === 0 && (
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4 text-center">
             <Dna className="h-10 w-10 text-cyan-400 animate-pulse mb-2" />
             <p className="text-sm font-semibold text-slate-200 font-sans">BIO-COLLISION FIELD CLEAN</p>
@@ -258,3 +258,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({
     </div>
   );
 };
+
+function toCoordinateKey(row: number, col: number): string {
+  return `${row}:${col}`;
+}

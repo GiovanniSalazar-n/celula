@@ -18,6 +18,14 @@ import { LogsPanel } from './components/LogsPanel';
 import { FinalResults } from './components/FinalResults';
 import { Dna, ArrowLeft } from 'lucide-react';
 
+const MAX_LOG_ENTRIES = 150;
+
+const PLAYBACK_PROFILES = {
+  1: { turnDelayMs: 500, frameBudgetMs: 4, maxTurnsPerFrame: 1 },
+  2: { turnDelayMs: 200, frameBudgetMs: 6, maxTurnsPerFrame: 2 },
+  5: { turnDelayMs: 60, frameBudgetMs: 9, maxTurnsPerFrame: 4 },
+} satisfies Record<SimulationSettings['speed'], { turnDelayMs: number; frameBudgetMs: number; maxTurnsPerFrame: number }>;
+
 export default function App() {
   const [screen, setScreen] = useState<'setup' | 'simulation' | 'results'>('setup');
   const [gameState, setGameState] = useState<GameState>('setup');
@@ -51,18 +59,47 @@ export default function App() {
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [selectedCellId, setSelectedCellId] = useState<string | null>(null);
   const [finalStats, setFinalStats] = useState<FinalStats | null>(null);
-  const simTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const animationFrameRef = useRef<number | null>(null);
+  const lastFrameTimeRef = useRef<number | null>(null);
+  const accumulatedPlaybackTimeRef = useRef(0);
+  const matchRef = useRef<Match | null>(null);
+  const gameStateRef = useRef<GameState>('setup');
+  const settingsRef = useRef<SimulationSettings>(settings);
 
   const cells = useMemo(() => (match ? match.board.cells.map(toUiCell) : []), [match]);
   const currentTurn = match?.currentTurn ?? 0;
 
   useEffect(() => {
-    let delay = 500;
-    if (settings.speed === 2) delay = 200;
-    if (settings.speed === 5) delay = 60;
-
+    const delay = PLAYBACK_PROFILES[settings.speed].turnDelayMs;
     setSettings(prev => ({ ...prev, maxTurns: TURN_LIMIT, turnDelay: delay }));
   }, [settings.speed]);
+
+  useEffect(() => {
+    matchRef.current = match;
+  }, [match]);
+
+  useEffect(() => {
+    gameStateRef.current = gameState;
+  }, [gameState]);
+
+  useEffect(() => {
+    settingsRef.current = settings;
+  }, [settings]);
+
+  const appendLogs = (newLogs: LogEntry[]) => {
+    if (newLogs.length === 0) return;
+    setLogs(prev => [...prev, ...newLogs].slice(-MAX_LOG_ENTRIES));
+  };
+
+  const cancelPlaybackFrame = () => {
+    if (animationFrameRef.current !== null) {
+      cancelAnimationFrame(animationFrameRef.current);
+      animationFrameRef.current = null;
+    }
+
+    lastFrameTimeRef.current = null;
+    accumulatedPlaybackTimeRef.current = 0;
+  };
 
   const handleStartSimulation = () => {
     const newMatch = createInitialMatch([toEnginePlayer(p1, 'player-1'), toEnginePlayer(p2, 'player-2')]);
@@ -91,7 +128,7 @@ export default function App() {
       });
       const newErrors = nextMatch.errors.slice(previousErrorCount).map(toLogEntry);
       if (newErrors.length > 0) {
-        setLogs(prev => [...prev, ...newErrors]);
+        appendLogs(newErrors);
       }
 
       if (nextMatch.result) {
@@ -105,33 +142,84 @@ export default function App() {
   };
 
   useEffect(() => {
-    if (gameState === 'running') {
-      simTimerRef.current = setInterval(() => {
-        handleSingleStep();
-      }, settings.turnDelay);
-    } else if (simTimerRef.current) {
-      clearInterval(simTimerRef.current);
-      simTimerRef.current = null;
+    if (gameState !== 'running') {
+      cancelPlaybackFrame();
+      return undefined;
     }
 
-    return () => {
-      if (simTimerRef.current) {
-        clearInterval(simTimerRef.current);
+    let cancelled = false;
+
+    const runFrame = (timestamp: number) => {
+      if (cancelled || gameStateRef.current !== 'running') return;
+
+      const profile = PLAYBACK_PROFILES[settingsRef.current.speed];
+      const previousTimestamp = lastFrameTimeRef.current ?? timestamp;
+      const elapsed = Math.min(timestamp - previousTimestamp, 1000);
+      lastFrameTimeRef.current = timestamp;
+      accumulatedPlaybackTimeRef.current += elapsed;
+
+      let workingMatch = matchRef.current;
+      let executedTurns = 0;
+      let finishedResult: MatchResult | null = null;
+      const newLogs: LogEntry[] = [];
+      const frameStartedAt = performance.now();
+
+      while (
+        workingMatch &&
+        workingMatch.status !== 'finished' &&
+        accumulatedPlaybackTimeRef.current >= profile.turnDelayMs &&
+        executedTurns < profile.maxTurnsPerFrame &&
+        (executedTurns === 0 || performance.now() - frameStartedAt < profile.frameBudgetMs)
+      ) {
+        const previousErrorCount = workingMatch.errors.length;
+        workingMatch = executeTurn({
+          ...workingMatch,
+          status: 'running',
+        });
+        accumulatedPlaybackTimeRef.current -= profile.turnDelayMs;
+        executedTurns += 1;
+
+        newLogs.push(...workingMatch.errors.slice(previousErrorCount).map(toLogEntry));
+
+        if (workingMatch.result) {
+          finishedResult = workingMatch.result;
+          break;
+        }
       }
+
+      if (executedTurns > 0 && workingMatch) {
+        matchRef.current = workingMatch;
+        setMatch(workingMatch);
+        appendLogs(newLogs);
+
+        if (finishedResult) {
+          setGameState('finished');
+          setFinalStats(toFinalStats(finishedResult));
+          setScreen('results');
+          return;
+        }
+      }
+
+      animationFrameRef.current = requestAnimationFrame(runFrame);
     };
-  }, [gameState, settings.turnDelay, match?.currentTurn]);
+
+    animationFrameRef.current = requestAnimationFrame(runFrame);
+
+    return () => {
+      cancelled = true;
+      cancelPlaybackFrame();
+    };
+  }, [gameState]);
 
   const handleTogglePlay = () => {
     if (gameState === 'finished') return;
-    setGameState(prev => (prev === 'running' ? 'paused' : 'running'));
-    setMatch(prev => prev ? { ...prev, status: gameState === 'running' ? 'paused' : 'running' } : prev);
+    const nextState = gameState === 'running' ? 'paused' : 'running';
+    setGameState(nextState);
+    setMatch(prev => prev ? { ...prev, status: nextState === 'running' ? 'running' : 'paused' } : prev);
   };
 
   const handleResetMatch = () => {
-    if (simTimerRef.current) {
-      clearInterval(simTimerRef.current);
-      simTimerRef.current = null;
-    }
+    cancelPlaybackFrame();
 
     const newMatch = createInitialMatch([toEnginePlayer(p1, 'player-1'), toEnginePlayer(p2, 'player-2')]);
     setMatch(newMatch);
@@ -144,10 +232,7 @@ export default function App() {
   const handleEndSimulation = () => {
     if (!match) return;
 
-    if (simTimerRef.current) {
-      clearInterval(simTimerRef.current);
-      simTimerRef.current = null;
-    }
+    cancelPlaybackFrame();
 
     const result = evaluateVictory(match, 'manual-end');
     if (!result) return;
@@ -155,8 +240,7 @@ export default function App() {
     setMatch({ ...match, status: 'finished', result });
     setGameState('finished');
     setFinalStats(toFinalStats(result));
-    setLogs(prev => [
-      ...prev,
+    appendLogs([
       {
         turn: match.currentTurn,
         type: 'system',
@@ -167,10 +251,7 @@ export default function App() {
   };
 
   const handleBackToSetup = () => {
-    if (simTimerRef.current) {
-      clearInterval(simTimerRef.current);
-      simTimerRef.current = null;
-    }
+    cancelPlaybackFrame();
     setMatch(null);
     setGameState('setup');
     setScreen('setup');
