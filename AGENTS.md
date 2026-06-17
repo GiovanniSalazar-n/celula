@@ -1,5 +1,5 @@
 <!-- SPECKIT START -->
-Current plan: `specs/001-battle-cells-mvp/plan.md`
+Current plan: `specs/002-editor-language-v2/plan.md`
 
 For additional context about technologies to be used, project structure,
 shell commands, and other important information, read the current plan.
