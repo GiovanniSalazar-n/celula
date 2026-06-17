@@ -14,6 +14,8 @@ export const TURN_LIMIT = 5000;
 export const MAX_HEALTH = 100;
 export const EAT_DAMAGE = 5;
 export const REST_HEAL = 3;
+export const MAX_ERRORS_PER_TURN = 100;
+export const MAX_STORED_MATCH_ERRORS = 200;
 
 export const DIRECTIONS = [
   'n',

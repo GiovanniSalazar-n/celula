@@ -2,7 +2,13 @@ import { parseActionCode } from '../actions/parseActionCode';
 import { createBoard } from '../board/createBoard';
 import { getCellAtPosition } from '../board/occupancy';
 import { isInsideBoard, offsetPosition, positionKey } from '../board/position';
-import { EAT_DAMAGE, MAX_HEALTH, REST_HEAL } from '../constants/gameConstants';
+import {
+  EAT_DAMAGE,
+  MAX_ERRORS_PER_TURN,
+  MAX_HEALTH,
+  MAX_STORED_MATCH_ERRORS,
+  REST_HEAL,
+} from '../constants/gameConstants';
 import { buildFunctionArgs } from '../validation/buildFunctionArgs';
 import { executeUserFunction } from '../validation/executeUserFunction';
 import { evaluateVictory } from '../victory/evaluateVictory';
@@ -29,7 +35,8 @@ export function executeTurn(match: Match): Match {
   const cells = match.board.cells.map((cell) => ({ ...cell, position: { ...cell.position } }));
   const occupancy = new Map<OccupancyKey, string>(match.board.occupancy);
   const idToIndex = new Map<string, number>();
-  const errors: GameError[] = [...match.errors];
+  const errors: GameError[] = trimStoredErrors(match.errors);
+  const errorCountsByTurn = countErrorsByTurn(errors);
 
   cells.forEach((cell, index) => {
     idToIndex.set(cell.id, index);
@@ -58,7 +65,7 @@ export function executeTurn(match: Match): Match {
     const execution = executeUserFunction(player.functionSource, args);
 
     if (execution.error) {
-      errors.push({
+      pushGameError(errors, errorCountsByTurn, {
         turn: match.currentTurn,
         playerId: player.id,
         cellId: currentCell.id,
@@ -75,7 +82,7 @@ export function executeTurn(match: Match): Match {
 
     const parsed = parseActionCode(execution.action);
     if (parsed.isValid === false) {
-      errors.push({
+      pushGameError(errors, errorCountsByTurn, {
         turn: match.currentTurn,
         playerId: player.id,
         cellId: currentCell.id,
@@ -94,6 +101,7 @@ export function executeTurn(match: Match): Match {
       direction: parsed.direction,
       currentTurn: match.currentTurn,
       errors,
+      errorCountsByTurn,
       playerId: player.id,
     });
   }
@@ -131,6 +139,7 @@ interface WorkingStateAction {
   direction?: Direction;
   currentTurn: number;
   errors: GameError[];
+  errorCountsByTurn: Map<number, number>;
   playerId: PlayerId;
 }
 
@@ -249,13 +258,58 @@ function markInvalid(action: WorkingStateAction, cell: Cell, message: string, la
     lastAction,
     lastActionStatus: 'invalid',
   };
-  action.errors.push({
+  pushGameError(action.errors, action.errorCountsByTurn, {
     turn: action.currentTurn,
     playerId: action.playerId,
     cellId: cell.id,
     type: 'invalid-action',
     message,
   });
+}
+
+function pushGameError(
+  errors: GameError[],
+  errorCountsByTurn: Map<number, number>,
+  error: GameError,
+): void {
+  const turnCount = errorCountsByTurn.get(error.turn) ?? 0;
+  if (turnCount >= MAX_ERRORS_PER_TURN) {
+    return;
+  }
+
+  errors.push(error);
+  errorCountsByTurn.set(error.turn, turnCount + 1);
+
+  if (errors.length > MAX_STORED_MATCH_ERRORS) {
+    const removedErrors = errors.splice(0, errors.length - MAX_STORED_MATCH_ERRORS);
+
+    for (const removedError of removedErrors) {
+      const count = errorCountsByTurn.get(removedError.turn);
+      if (count === undefined) {
+        continue;
+      }
+
+      if (count <= 1) {
+        errorCountsByTurn.delete(removedError.turn);
+      } else {
+        errorCountsByTurn.set(removedError.turn, count - 1);
+      }
+    }
+  }
+}
+
+function trimStoredErrors(errors: readonly GameError[]): GameError[] {
+  return errors.slice(-MAX_STORED_MATCH_ERRORS);
+}
+
+function countErrorsByTurn(errors: readonly GameError[]): Map<number, number> {
+  const counts = new Map<number, number>();
+
+  for (const error of errors) {
+    counts.set(error.turn, (counts.get(error.turn) ?? 0) + 1);
+  }
+
+  return counts;
 }
 
 export function buildNearbyStates(match: Match, cell: Cell): NeighborState[] {

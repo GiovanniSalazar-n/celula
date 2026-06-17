@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { executeTurn } from '../../engine';
+import { executeTurn, MAX_ERRORS_PER_TURN, MAX_STORED_MATCH_ERRORS } from '../../engine';
 import { cellOneFixture, cellTwoFixture, createMatchFixture, playerOneFixture, playerTwoFixture } from '../fixtures/gameFixtures';
 
 describe('executeTurn', () => {
@@ -55,5 +55,35 @@ describe('executeTurn', () => {
       type: 'runtime',
       cellId: cellOneFixture.id,
     });
+  });
+
+  it('bounds invalid action telemetry so crowded reproduction does not retain unbounded history', () => {
+    const packedCells = Array.from({ length: MAX_ERRORS_PER_TURN + 80 }, (_, index) => ({
+      ...cellOneFixture,
+      id: `packed-${index}`,
+      position: { row: 20, column: index },
+    }));
+    const existingErrors = Array.from({ length: MAX_STORED_MATCH_ERRORS + 50 }, (_, index) => ({
+      turn: index + 1,
+      playerId: playerOneFixture.id,
+      cellId: `old-${index}`,
+      type: 'invalid-action' as const,
+      message: 'Old invalid action.',
+    }));
+    const match = {
+      ...createMatchFixture(packedCells),
+      players: [
+        { ...playerOneFixture, functionSource: 'def cell(health, nearby):\n    return "re"' },
+        playerTwoFixture,
+      ] as const,
+      currentTurn: 1200,
+      errors: existingErrors,
+    };
+
+    const result = executeTurn(match);
+    const currentTurnErrors = result.errors.filter((error) => error.turn === 1200);
+
+    expect(currentTurnErrors.length).toBe(MAX_ERRORS_PER_TURN);
+    expect(result.errors.length).toBeLessThanOrEqual(MAX_STORED_MATCH_ERRORS);
   });
 });

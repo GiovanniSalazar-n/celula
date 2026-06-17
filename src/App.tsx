@@ -121,12 +121,14 @@ export default function App() {
     setMatch(prevMatch => {
       if (!prevMatch || prevMatch.status === 'finished') return prevMatch;
 
-      const previousErrorCount = prevMatch.errors.length;
+      const executedTurn = prevMatch.currentTurn;
       const nextMatch = executeTurn({
         ...prevMatch,
         status: gameState === 'running' ? 'running' : 'paused',
       });
-      const newErrors = nextMatch.errors.slice(previousErrorCount).map(toLogEntry);
+      const newErrors = nextMatch.errors
+        .filter(error => error.turn === executedTurn)
+        .map(toLogEntry);
       if (newErrors.length > 0) {
         appendLogs(newErrors);
       }
@@ -171,7 +173,7 @@ export default function App() {
         executedTurns < profile.maxTurnsPerFrame &&
         (executedTurns === 0 || performance.now() - frameStartedAt < profile.frameBudgetMs)
       ) {
-        const previousErrorCount = workingMatch.errors.length;
+        const executedTurn = workingMatch.currentTurn;
         workingMatch = executeTurn({
           ...workingMatch,
           status: 'running',
@@ -179,7 +181,11 @@ export default function App() {
         accumulatedPlaybackTimeRef.current -= profile.turnDelayMs;
         executedTurns += 1;
 
-        newLogs.push(...workingMatch.errors.slice(previousErrorCount).map(toLogEntry));
+        newLogs.push(
+          ...workingMatch.errors
+            .filter(error => error.turn === executedTurn)
+            .map(toLogEntry),
+        );
 
         if (workingMatch.result) {
           finishedResult = workingMatch.result;
