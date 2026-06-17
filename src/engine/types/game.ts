@@ -84,7 +84,7 @@ export interface Cell {
   lastActionStatus?: 'success' | 'failed' | 'invalid' | 'none';
 }
 
-export type OccupancyKey = `${number},${number}`;
+export type OccupancyKey = number;
 
 export interface Board {
   rows: 100;

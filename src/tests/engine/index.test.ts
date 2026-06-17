@@ -10,6 +10,7 @@ import {
   TURN_LIMIT,
   type Cell,
   type CellFunctionArgs,
+  positionKey,
 } from '../../engine';
 import { cellOneFixture, createMatchFixture } from '../fixtures/gameFixtures';
 
@@ -50,7 +51,7 @@ describe('engine public surface', () => {
 
     expect(match.board.rows).toBe(100);
     expect(match.board.columns).toBe(200);
-    expect(match.board.occupancy.get('10,10')).toBe('cell-1');
+    expect(match.board.occupancy.get(positionKey({ row: 10, column: 10 }))).toBe('cell-1');
     expect('matrix' in match.board).toBe(false);
   });
 });

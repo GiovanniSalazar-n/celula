@@ -7,7 +7,7 @@ import {
 } from '../constants/gameConstants';
 import { createBoard } from '../board/createBoard';
 import { positionKey } from '../board/position';
-import type { Cell, Match, Player, Position } from '../types/game';
+import type { Cell, Match, OccupancyKey, Player, Position } from '../types/game';
 
 export interface CreateInitialMatchOptions {
   random?: () => number;
@@ -18,7 +18,7 @@ export function createInitialMatch(
   options: CreateInitialMatchOptions = {},
 ): Match {
   const random = options.random ?? Math.random;
-  const usedPositions = new Set<string>();
+  const usedPositions = new Set<OccupancyKey>();
 
   const cells: Cell[] = players.map((player) => {
     const position = randomDistinctPosition(random, usedPositions);
@@ -48,7 +48,7 @@ export function createInitialMatch(
   };
 }
 
-function randomDistinctPosition(random: () => number, usedPositions: Set<string>): Position {
+function randomDistinctPosition(random: () => number, usedPositions: Set<OccupancyKey>): Position {
   for (let attempts = 0; attempts < 100; attempts += 1) {
     const position = {
       row: Math.floor(random() * BOARD_ROWS),

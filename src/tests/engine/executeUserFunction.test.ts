@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { executeUserFunction } from '../../engine';
+import { buildNearbyKey, decodeNearbyKey, executeUserFunction } from '../../engine';
 
 describe('executeUserFunction', () => {
   it('executes real Python syntax with only health and nearby arguments', () => {
@@ -31,5 +31,11 @@ describe('executeUserFunction', () => {
         nearby: ['empty', 'empty', 'empty', 'empty', 'empty', 'empty', 'empty', 'empty'],
       }).error,
     ).toBe('Timed out');
+  });
+
+  it('encodes nearby states without changing the documented direction order', () => {
+    const nearby = ['empty', 'allied', 'enemy', 'outside', 'empty', 'empty', 'enemy', 'allied'] as const;
+
+    expect(decodeNearbyKey(buildNearbyKey(nearby))).toEqual(nearby);
   });
 });

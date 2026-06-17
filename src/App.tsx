@@ -20,6 +20,8 @@ import { Dna, ArrowLeft } from 'lucide-react';
 
 const MAX_LOG_ENTRIES = 150;
 const MIN_RENDER_INTERVAL_MS = 250;
+const DENSE_BOARD_RENDER_INTERVAL_MS = 750;
+const DENSE_BOARD_CELL_COUNT = 10000;
 
 const PLAYBACK_PROFILES = {
   1: { turnDelayMs: 500, frameBudgetMs: 4, maxTurnsPerFrame: 1 },
@@ -211,7 +213,10 @@ export default function App() {
 
       if (executedTurns > 0 && workingMatch) {
         matchRef.current = workingMatch;
-        const shouldCommitRender = finishedResult || timestamp - lastRenderCommitTimeRef.current >= MIN_RENDER_INTERVAL_MS;
+        const renderIntervalMs = workingMatch.board.cells.length >= DENSE_BOARD_CELL_COUNT
+          ? DENSE_BOARD_RENDER_INTERVAL_MS
+          : MIN_RENDER_INTERVAL_MS;
+        const shouldCommitRender = finishedResult || timestamp - lastRenderCommitTimeRef.current >= renderIntervalMs;
 
         if (shouldCommitRender) {
           lastRenderCommitTimeRef.current = timestamp;

@@ -107,7 +107,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({
       {/* Main Canvas Area */}
       <div 
         ref={containerRef} 
-        className="relative w-full aspect-[2/1] bg-[#0a0f1d] cursor-crosshair rounded-lg overflow-hidden border border-slate-800"
+        className="relative w-full aspect-[2/1] bg-[#0a0f1d] rounded-lg overflow-hidden border border-slate-800"
       >
         <canvas
           id="simulation-canvas-board"

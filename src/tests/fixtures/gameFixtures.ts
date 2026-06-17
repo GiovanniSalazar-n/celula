@@ -1,5 +1,5 @@
 import type { Board, Cell, Match, Player } from '../../engine';
-import { BOARD_COLUMNS, BOARD_ROWS, SIMULATION_SPEEDS, TURN_LIMIT } from '../../engine';
+import { BOARD_COLUMNS, BOARD_ROWS, positionKey, SIMULATION_SPEEDS, TURN_LIMIT } from '../../engine';
 
 export const playerOneFixture: Player = {
   id: 'player-1',
@@ -46,7 +46,7 @@ export function createBoardFixture(cells: Cell[] = [cellOneFixture, cellTwoFixtu
     rows: BOARD_ROWS,
     columns: BOARD_COLUMNS,
     cells,
-    occupancy: new Map(cells.map((cell) => [`${cell.position.row},${cell.position.column}`, cell.id])),
+    occupancy: new Map(cells.map((cell) => [positionKey(cell.position), cell.id])),
   };
 }
 

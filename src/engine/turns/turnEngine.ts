@@ -1,6 +1,13 @@
 import { parseActionCode } from '../actions/parseActionCode';
 import { getCellAtPosition } from '../board/occupancy';
-import { isInsideBoard, offsetPosition, positionKey } from '../board/position';
+import {
+  DIRECTION_OFFSETS,
+  isInsideBoard,
+  isInsideCoordinates,
+  offsetPosition,
+  positionKey,
+  positionKeyFromCoordinates,
+} from '../board/position';
 import {
   DIRECTIONS,
   EAT_DAMAGE,
@@ -9,7 +16,7 @@ import {
   MAX_STORED_MATCH_ERRORS,
   REST_HEAL,
 } from '../constants/gameConstants';
-import { executeUserFunction } from '../validation/executeUserFunction';
+import { decodeNearbyKey, executeUserFunctionWithNearbyKey } from '../validation/executeUserFunction';
 import { evaluateVictory } from '../victory/evaluateVictory';
 import type { Cell, Direction, GameError, Match, NeighborState, OccupancyKey, PlayerId, Position } from '../types/game';
 
@@ -56,11 +63,13 @@ export function executeTurn(match: Match): Match {
       continue;
     }
 
-    const args = {
-      health: currentCell.health,
-      nearby: buildNearbyStatesFromWorkingState(currentCell, cells, occupancy, idToIndex),
-    };
-    const execution = executeUserFunction(player.functionSource, args);
+    const nearbyKey = buildNearbyKeyFromWorkingState(currentCell, cells, occupancy, idToIndex);
+    const execution = executeUserFunctionWithNearbyKey(
+      player.functionSource,
+      currentCell.health,
+      nearbyKey,
+      () => decodeNearbyKey(nearbyKey),
+    );
 
     if (execution.error) {
       pushGameError(errors, errorCountsByTurn, {
@@ -153,9 +162,14 @@ function resolveActionInWorkingState(action: WorkingStateAction): void {
   }
 
   if (action.category === 'rest') {
+    const nextHealth = Math.min(MAX_HEALTH, cell.health + REST_HEAL);
+    if (nextHealth === cell.health && cell.lastAction === 'd' && cell.lastActionStatus === 'success') {
+      return;
+    }
+
     action.cells[action.cellIndex] = {
       ...cell,
-      health: Math.min(MAX_HEALTH, cell.health + REST_HEAL),
+      health: nextHealth,
       lastAction: 'd',
       lastActionStatus: 'success',
     };
@@ -168,17 +182,24 @@ function resolveActionInWorkingState(action: WorkingStateAction): void {
   }
 
   if (action.category === 'move') {
-    const destination = offsetPosition(cell.position, action.direction);
-    if (!isInsideBoard(destination) || action.occupancy.has(positionKey(destination))) {
+    const offset = DIRECTION_OFFSETS[action.direction];
+    const destinationRow = cell.position.row + offset.row;
+    const destinationColumn = cell.position.column + offset.column;
+    const destinationKey = positionKeyFromCoordinates(destinationRow, destinationColumn);
+
+    if (!isInsideCoordinates(destinationRow, destinationColumn) || action.occupancy.has(destinationKey)) {
       markInvalid(action, cell, 'Move destination is outside or occupied.', `m${action.direction}`);
       return;
     }
 
     action.occupancy.delete(positionKey(cell.position));
-    action.occupancy.set(positionKey(destination), cell.id);
+    action.occupancy.set(destinationKey, cell.id);
     action.cells[action.cellIndex] = {
       ...cell,
-      position: destination,
+      position: {
+        row: destinationRow,
+        column: destinationColumn,
+      },
       lastAction: `m${action.direction}`,
       lastActionStatus: 'success',
     };
@@ -186,13 +207,16 @@ function resolveActionInWorkingState(action: WorkingStateAction): void {
   }
 
   if (action.category === 'eat') {
-    const targetPosition = offsetPosition(cell.position, action.direction);
-    if (!isInsideBoard(targetPosition)) {
+    const offset = DIRECTION_OFFSETS[action.direction];
+    const targetRow = cell.position.row + offset.row;
+    const targetColumn = cell.position.column + offset.column;
+
+    if (!isInsideCoordinates(targetRow, targetColumn)) {
       markInvalid(action, cell, 'Eat target is outside the board.', `a${action.direction}`);
       return;
     }
 
-    const targetId = action.occupancy.get(positionKey(targetPosition));
+    const targetId = action.occupancy.get(positionKeyFromCoordinates(targetRow, targetColumn));
     const targetIndex = targetId ? action.idToIndex.get(targetId) : undefined;
     const target = targetIndex === undefined ? undefined : action.cells[targetIndex];
     if (!target || !target.isAlive || target.teamId === cell.teamId) {
@@ -219,8 +243,12 @@ function resolveActionInWorkingState(action: WorkingStateAction): void {
   }
 
   if (action.category === 'reproduce') {
-    const destination = offsetPosition(cell.position, action.direction);
-    if (!isInsideBoard(destination) || action.occupancy.has(positionKey(destination))) {
+    const offset = DIRECTION_OFFSETS[action.direction];
+    const destinationRow = cell.position.row + offset.row;
+    const destinationColumn = cell.position.column + offset.column;
+    const destinationKey = positionKeyFromCoordinates(destinationRow, destinationColumn);
+
+    if (!isInsideCoordinates(destinationRow, destinationColumn) || action.occupancy.has(destinationKey)) {
       markInvalid(action, cell, 'Reproduction destination is outside or occupied.', `r${action.direction}`);
       return;
     }
@@ -240,7 +268,10 @@ function resolveActionInWorkingState(action: WorkingStateAction): void {
         id: `${cell.teamId}-cell-${action.currentTurn}-${action.cells.length + 1}`,
         teamId: cell.teamId,
         color: cell.color,
-        position: destination,
+        position: {
+          row: destinationRow,
+          column: destinationColumn,
+        },
         health: childHealth,
         isAlive: true,
         creationTurn: action.currentTurn,
@@ -249,7 +280,7 @@ function resolveActionInWorkingState(action: WorkingStateAction): void {
       };
       action.idToIndex.set(newborn.id, action.cells.length);
       action.cells.push(newborn);
-      action.occupancy.set(positionKey(destination), newborn.id);
+      action.occupancy.set(destinationKey, newborn.id);
     }
   }
 }
@@ -331,26 +362,34 @@ export function buildNearbyStates(match: Match, cell: Cell): NeighborState[] {
   });
 }
 
-function buildNearbyStatesFromWorkingState(
+function buildNearbyKeyFromWorkingState(
   cell: Cell,
   cells: readonly Cell[],
   occupancy: ReadonlyMap<OccupancyKey, string>,
   idToIndex: ReadonlyMap<string, number>,
-): NeighborState[] {
-  return DIRECTIONS.map((direction) => {
-    const position = offsetPosition(cell.position, direction);
+): number {
+  let nearbyKey = 0;
 
-    if (!isInsideBoard(position)) {
-      return 'outside';
+  for (let index = 0; index < DIRECTIONS.length; index += 1) {
+    const offset = DIRECTION_OFFSETS[DIRECTIONS[index]];
+    const row = cell.position.row + offset.row;
+    const column = cell.position.column + offset.column;
+
+    if (!isInsideCoordinates(row, column)) {
+      nearbyKey = (nearbyKey << 2) | 3;
+      continue;
     }
 
-    const occupantId = occupancy.get(positionKey(position));
+    const occupantId = occupancy.get(positionKeyFromCoordinates(row, column));
     const occupantIndex = occupantId ? idToIndex.get(occupantId) : undefined;
     const occupant = occupantIndex === undefined ? undefined : cells[occupantIndex];
     if (!occupant) {
-      return 'empty';
+      nearbyKey <<= 2;
+      continue;
     }
 
-    return occupant.teamId === cell.teamId ? 'allied' : 'enemy';
-  });
+    nearbyKey = (nearbyKey << 2) | (occupant.teamId === cell.teamId ? 1 : 2);
+  }
+
+  return nearbyKey;
 }

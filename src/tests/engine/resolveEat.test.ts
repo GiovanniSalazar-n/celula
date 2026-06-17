@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { resolveEat } from '../../engine';
+import { positionKey, resolveEat } from '../../engine';
 import { cellOneFixture, cellTwoFixture, createMatchFixture } from '../fixtures/gameFixtures';
 
 describe('resolveEat', () => {
@@ -24,7 +24,7 @@ describe('resolveEat', () => {
 
     expect(result.status).toBe('success');
     expect(result.match.board.cells.some((cell) => cell.id === defender.id)).toBe(false);
-    expect(result.match.board.occupancy.has('10,11')).toBe(false);
+    expect(result.match.board.occupancy.has(positionKey({ row: 10, column: 11 }))).toBe(false);
   });
 
   it('cancels eat against allied, empty, or outside squares without changing health', () => {
