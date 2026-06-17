@@ -85,7 +85,7 @@ type Match = {
   players: [Player, Player];
   board: Board;
   currentTurn: number;
-  turnLimit: 5000;
+  turnLimit: number;
   status: MatchStatus;
   isLocked: boolean;
   result?: MatchResult;
@@ -104,7 +104,9 @@ type MatchStatus =
 Rules:
 
 - Current turn starts at `1`.
-- Turn limit is `5000`.
+- Turn limit defaults to `5000`.
+- Editor Language v2 may select a bounded preset up to `10000` before Play.
+- Selected turn limit locks when Play is pressed.
 - The match locks when Play is pressed.
 - Locked matches cannot modify players, colors, code, rules, or initial conditions.
 

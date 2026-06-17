@@ -143,3 +143,29 @@ Test that:
 - Simulation screen prevents editing after Play.
 - Final screen shows winner or draw.
 - Final screen allows starting a new match.
+
+### 12. Editor Language v2 Tests
+
+Test that:
+
+- Bounded `for` loops validate and execute.
+- Unbounded `while` and `while true` are rejected.
+- Recursion is rejected.
+- `eval`, `exec`, `Function`, `fetch`, `window`, `document`, and
+  `localStorage` are rejected.
+- Safe helpers `range`, `len`, `sum`, `any`, `isEnemy`, and `emptyDirections`
+  validate and execute only against safe read-only values.
+- Step limit stops excessive execution.
+- The 1 second timeout still works.
+- Runtime errors affect only the current acting cell.
+- Existing MVP behavior and previous tests still pass.
+
+### 13. Turn Limit Selection Tests
+
+Test that:
+
+- Default turn limit remains 5000.
+- A bounded preset up to 10000 can be selected before Play.
+- Turn limit selection locks after Play.
+- Turn N executes fully before turn-limit victory evaluation.
+- Existing 5000-turn behavior still passes.

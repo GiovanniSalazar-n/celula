@@ -26,7 +26,14 @@ state transitions to the React UI.
 - `src/engine/actions/resolveRest.ts`
 - `src/engine/turns/turnEngine.ts`
 - `src/engine/validation/validateUserFunction.ts`
-- `src/engine/validation/executeUserFunction.ts`
+- `src/engine/validation/forbiddenSyntax.ts`
+- `src/engine/validation/allowedHelpers.ts`
+- `src/engine/runtime/createSafeContext.ts`
+- `src/engine/runtime/safeHelpers.ts`
+- `src/engine/runtime/executeUserFunction.ts`
+- `src/engine/runtime/stepLimiter.ts`
+- `src/engine/runtime/runtimeErrors.ts`
+- `src/engine/runtime/examples.ts`
 - `src/engine/victory/evaluateVictory.ts`
 - `src/engine/adapters/gameViewState.ts`
 - `src/engine/index.ts`
@@ -41,7 +48,7 @@ Creates a locked match-ready state after both players are valid and confirmed.
 - Two confirmed players with unique names, colors, and valid functions.
 
 **Outputs**:
-- Match with fixed board, `currentTurn = 1`, `turnLimit = 5000`, one random
+- Match with fixed board, `currentTurn = 1`, selected `turnLimit`, one random
   initial cell per player, and `isLocked = true`.
 
 **Rules**:
@@ -50,6 +57,9 @@ Creates a locked match-ready state after both players are valid and confirmed.
 - No backend or persistent storage is involved.
 - The board model must support compact occupancy lookup and avoid requiring a
   full 100 x 200 matrix copy on every tick.
+- If no turn limit is explicitly selected, default to 5000.
+- Selected turn limit must be a bounded preset and may not exceed 10000.
+- Selected turn limit locks after Play.
 
 ### `parseActionCode(actionCode)`
 
@@ -138,9 +148,11 @@ Validates player function source before confirmation.
 - Exposes only direct `health` and `nearby` arguments to player code.
 - `nearby` contains exactly eight neighbor states and only the values `empty`,
   `allied`, `enemy`, or `outside`.
-- Rejects imports, file/network access, eval, exec, dangerous builtins, state
-  mutation attempts, dynamic returns, invalid action codes, infinite loops, and
-  timeouts.
+- Allows bounded `for` loops and approved helpers documented in
+  `editor-language-v2-contract.md`.
+- Rejects imports, file/network access, eval, exec, `Function`, `fetch`,
+  browser globals, dangerous builtins, recursion, unbounded loops, state
+  mutation attempts, invalid action codes, excessive steps, and timeouts.
 - Does not expose board state, full cell lists, turn objects, team objects,
   internal IDs, mutable cells, or engine internals.
 
@@ -150,8 +162,10 @@ Executes a previously valid function with read-only direct arguments.
 
 **Rules**:
 - Function cannot mutate engine state.
-- Function receives only current health and nearby neighbor states.
-- Runtime error or timeout consumes action and records error.
+- Function receives only current health, nearby neighbor states, and approved
+  helper bindings.
+- Runtime error, step-limit failure, or timeout consumes only the current cell
+  action and records a clear error.
 
 ### `toGameViewState(match)`
 

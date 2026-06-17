@@ -141,3 +141,39 @@ required.
 
 Expected outcome: each final state is accurate, and a new match can be started
 from editable configuration.
+
+## Validation Scenario 7: Editor Language v2
+
+Use automated tests and the editor validation flow to verify:
+
+- A bounded `for` loop over `nearby` validates and executes.
+- A bounded `for` loop using `range(...)` validates and executes.
+- `while`, `while true`, recursion, async code, imports, file access, network
+  access, `eval`, `exec`, `Function`, `fetch`, `window`, `document`,
+  `localStorage`, and dynamic global access are rejected.
+- Safe helpers `range`, `len`, `sum`, `any`, `isEnemy`, and `emptyDirections`
+  work only with safe read-only values.
+- Step limit stops excessive execution before it can freeze the simulation.
+- The existing 1 second timeout still rejects long-running execution.
+- Runtime errors, step-limit failures, and timeouts consume only the current
+  cell action.
+- Previous MVP templates and tests still pass unchanged.
+
+Expected outcome: Editor Language v2 allows simple bounded strategies while
+keeping user code isolated from engine state.
+
+## Validation Scenario 8: Selectable Turn Limit
+
+1. Open the configuration screen.
+2. Verify the default turn limit is 5000.
+3. Select a documented preset up to 10000.
+4. Start a valid match.
+5. Verify the selected turn limit is displayed on the simulation screen.
+6. Verify turn-limit selection is locked after Play.
+7. Use automated tests to prove turn N executes fully before turn-limit victory
+   evaluation for the selected value.
+8. Repeat with the default 5000 value and verify existing MVP behavior still
+   passes.
+
+Expected outcome: turn limit is configurable only within bounded presets,
+defaults to 5000, locks after Play, and does not change core action rules.

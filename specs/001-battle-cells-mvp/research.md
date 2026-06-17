@@ -182,3 +182,100 @@ are out of scope.
 **Alternatives considered**:
 - Keep the dependencies and env file unchanged: rejected for final MVP because
   it can falsely signal a backend or AI requirement.
+
+## Decision: Editor Language v2 Extends the Existing Contract
+
+**Decision**: Keep `def cell(health, nearby):` as the player-facing function
+shape and extend only the language/runtime features around it. Editor Language
+v2 allows bounded `for` loops and approved helpers while preserving direct
+`health` and `nearby` arguments only.
+
+**Rationale**: Existing MVP behavior and templates already depend on this
+minimal contract. Extending the current validator/executor is safer than
+introducing a new broad context object or exposing engine internals.
+
+**Alternatives considered**:
+- Replace the editor language entirely: rejected because it would risk changing
+  working MVP behavior and templates.
+- Add a full `context` object: rejected because it would broaden the user-code
+  surface beyond the current safety contract.
+
+## Decision: Bounded `for` Loops Only
+
+**Decision**: Permit only statically bounded `for` loops over approved finite
+sources such as `range(...)`, `nearby`, or helper outputs like
+`emptyDirections(nearby)`. Reject all `while` loops, including `while true`, and
+reject recursion.
+
+**Rationale**: Players need simple iteration for counting nearby states and
+choosing directions, but unbounded loops are the main safety and performance
+risk. Static validation plus runtime step limiting gives two layers of
+protection.
+
+**Alternatives considered**:
+- Continue rejecting all loops: rejected because v2 explicitly asks to permit
+  loops.
+- Allow `while` with a guard: rejected because proving termination is more
+  complex and easier to get wrong.
+
+## Decision: Safe Helper Runtime Module
+
+**Decision**: Add helper definitions under `src/engine/runtime/safeHelpers.ts`
+and expose only approved helpers through `createSafeContext`. Planned helpers:
+`range`, `len`, `sum`, `any`, `isEnemy`, and `emptyDirections`.
+
+**Rationale**: Helpers make common strategies easier while keeping the exposed
+data surface small. Helpers operate on read-only primitive values and neighbor
+state arrays, not on mutable cells or board objects.
+
+**Alternatives considered**:
+- Let user functions call arbitrary JavaScript/Python builtins: rejected because
+  it would expose unsafe capabilities and browser globals.
+- Add many board-aware helpers: rejected because the contract must not expose
+  full board state, full cell lists, teams, IDs, or mutation APIs.
+
+## Decision: Forbidden Syntax Is Its Own Validation Module
+
+**Decision**: Move forbidden syntax checks into
+`src/engine/validation/forbiddenSyntax.ts` and helper allow-list metadata into
+`src/engine/validation/allowedHelpers.ts`.
+
+**Rationale**: The current validator is becoming responsible for parsing,
+security, allowed returns, and runtime policy. Splitting these concerns makes
+tests clearer and prevents future safety rules from being hidden in a single
+large function.
+
+**Alternatives considered**:
+- Keep adding regexes inside `validateUserFunction.ts`: rejected because v2 adds
+  enough forbidden syntax cases that a dedicated module is easier to audit.
+
+## Decision: Step Limit Plus Timeout
+
+**Decision**: Add `src/engine/runtime/stepLimiter.ts` and enforce a maximum
+runtime step budget in addition to the existing 1 second timeout.
+
+**Rationale**: Timeout protects elapsed time, while step limiting protects the
+main thread from excessive iterations in cases that execute quickly but too
+often. Runtime errors from step limits must consume only the current cell action.
+
+**Alternatives considered**:
+- Timeout only: rejected because the browser can become unresponsive before a
+  timeout check is observed.
+- Worker-only execution: deferred because v2 can improve safety inside the
+  current local architecture first.
+
+## Decision: Selectable Turn Limit Is a Bounded v2 Extension
+
+**Decision**: Add a configurable turn-limit setting with default `5000` and
+bounded presets up to `10000`. The selected value locks after Play and turn N
+must execute completely before turn-limit victory evaluation.
+
+**Rationale**: The new request explicitly asks for a way to choose the number of
+turns. Keeping default 5000 preserves existing MVP behavior, while bounded
+presets prevent arbitrary long simulations from becoming a performance trap.
+
+**Alternatives considered**:
+- Keep only fixed 5000: rejected for Editor Language v2 because turn selection
+  is explicitly requested.
+- Allow arbitrary numeric input: rejected because it increases validation,
+  performance, and UX risk without clear MVP value.

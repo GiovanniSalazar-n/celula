@@ -9,7 +9,7 @@ game rules.
 type GameViewState = {
   matchStatus: "configuration" | "ready" | "running" | "paused" | "finished";
   currentTurn: number;
-  turnLimit: 5000;
+  turnLimit: number;
   players: PlayerView[];
   cells: CellView[];
   stats: TeamStatsView[];
@@ -17,6 +17,19 @@ type GameViewState = {
   result?: MatchResultView;
   isLocked: boolean;
   simulationSpeed: SimulationSpeedView;
+  turnLimitOptions: TurnLimitOptionsView;
+};
+```
+
+## Turn Limit Options View
+
+```ts
+type TurnLimitOptionsView = {
+  selected: number;
+  defaultValue: 5000;
+  maxValue: 10000;
+  availableValues: number[];
+  isLocked: boolean;
 };
 ```
 
@@ -114,6 +127,7 @@ The UI may request these actions:
 - Pause simulation.
 - Step one turn when paused.
 - Change simulation speed while keeping match configuration locked.
+- Select a bounded turn limit before lock.
 - End simulation.
 - Return to configuration after finished.
 
@@ -129,6 +143,7 @@ Uses existing setup cards and editor styling. Must show:
 - Load algorithm option.
 - Validate button and validation errors.
 - Play button enabled only when both players are confirmed and valid.
+- Turn limit preset selection with default 5000 and max 10000.
 
 ### Simulation Screen
 
@@ -136,7 +151,7 @@ Uses existing board/HUD style. Must show:
 - 100 x 200 board.
 - Team-colored cells.
 - Current turn.
-- Fixed turn limit 5000.
+- Selected turn limit.
 - Play, Pause, Step, End Simulation, and speed controls.
 - Invalid action error panel only.
 - Living cells and total health per team.
@@ -161,7 +176,8 @@ Uses existing result modal/card style. Must show:
   control bar, logs panel, and final card.
 - Rename text labels if needed to match MVP rules.
 - Remove age displays and replace with creation turn or neutral non-age stats.
-- Remove or disable custom turn limit controls.
+- Turn-limit controls may exist before Play, but selected value must be bounded,
+  default to 5000, and lock after Play.
 - Remove UI claims that contradict MVP rules, such as move/eat health costs or
   reproduction minimum health.
 - Speed controls affect playback pacing only and must not unlock or alter match

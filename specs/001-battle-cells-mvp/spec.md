@@ -109,7 +109,7 @@ verifying final result details and restart behavior.
 
 1. **Given** only one team remains alive, **When** the turn evaluation completes, **Then** the final screen shows that team as winner with final stats.
 2. **Given** both teams have no living cells, **When** the turn evaluation completes, **Then** the final screen shows a draw and the correct termination cause.
-3. **Given** turn 5000 has fully executed, **When** neither team has been eliminated, **Then** the final screen compares living cells, then total health, then declares a winner or draw.
+3. **Given** the selected final turn has fully executed, **When** neither team has been eliminated, **Then** the final screen compares living cells, then total health, then declares a winner or draw.
 4. **Given** a player manually ends the simulation, **When** the final screen is shown, **Then** the current leader is decided by living cells, then total health, then draw.
 5. **Given** the final screen is visible, **When** a player chooses to return to configuration, **Then** a new match can be configured from an editable configuration screen.
 
@@ -127,11 +127,22 @@ verifying final result details and restart behavior.
 - Reproduction splits odd health, with the original cell keeping the extra point.
 - Multiple cells share creation turn and must be ordered by start row, start column, then internal ID.
 - A cell dies before its scheduled action and must not act.
-- Turn 5000 must execute completely before final turn-limit evaluation.
+- The selected final turn must execute completely before final turn-limit evaluation.
 - Both teams are eliminated in the same turn.
 - Pause is used during simulation and must not unlock configuration.
 - A player returns to configuration and reloads the simulation; initial cell placement must be newly random rather than reused from the previous match.
 - The board contains 20,000 squares; turn updates must avoid unnecessary whole-board recreation or copying.
+- A user function contains a bounded `for` loop and must validate only when the
+  loop source is finite and approved.
+- A user function attempts `while`, `while true`, recursion, `Function`,
+  `fetch`, `window`, `document`, `localStorage`, or async behavior and must be
+  rejected before Play.
+- A user function exceeds the runtime step limit and must cause only the
+  current cell to lose its action.
+- A player selects a turn limit other than 5000, up to 10000, and the selected
+  value must lock after Play.
+- A selected turn limit must not change move, eat, reproduce, rest, death, or
+  victory tiebreak rules except for the final turn-limit turn number.
 
 ## Requirements *(mandatory)*
 
@@ -152,8 +163,8 @@ verifying final result details and restart behavior.
 - **FR-013**: Each cell MUST have an internal ID, team, color, position, health, life status, and creation turn.
 - **FR-014**: Cells MUST NOT have age, aging damage, death by age, age-based reproduction restrictions, or age-based execution order.
 - **FR-015**: Cell health MUST stay within 0 to 100, and a cell whose health reaches 0 MUST be immediately removed from the board.
-- **FR-016**: The simulation MUST start at turn 1 and use a turn limit of 5000.
-- **FR-017**: Turn 5000 MUST execute completely before final victory is evaluated by turn limit.
+- **FR-016**: The simulation MUST start at turn 1 and default to a turn limit of 5000.
+- **FR-017**: The selected final turn MUST execute completely before final victory is evaluated by turn limit.
 - **FR-018**: Each living eligible cell MUST perform at most one action per turn.
 - **FR-019**: Eligible cells MUST be those alive at the start of the turn, excluding newborn cells created during the current turn.
 - **FR-020**: Eligible cells MUST act in deterministic order by creation turn, start-of-turn row, start-of-turn column, then internal cell ID.
@@ -182,10 +193,23 @@ verifying final result details and restart behavior.
 - **FR-043**: The simulation screen MUST show an error panel for invalid actions only.
 - **FR-044**: The final result screen MUST show winner or draw, player names, living cells per team, final turn, and termination cause.
 - **FR-045**: The final result screen MUST allow returning to configuration for a new match.
-- **FR-046**: The match MUST end when only one team remains alive, both teams have no living cells, the turn limit has been reached after turn 5000 completes, or a player manually ends the simulation.
+- **FR-046**: The match MUST end when only one team remains alive, both teams have no living cells, the selected turn limit has been reached after the final selected turn completes, or a player manually ends the simulation.
 - **FR-047**: When the turn limit or manual End Simulation decides the match, the winner MUST be the team with the most living cells; if tied, the team with highest total health; if still tied, the result MUST be a draw.
 - **FR-048**: During simulation, board state updates MUST avoid unnecessary full recreation or full copying of the fixed 100 by 200 board on every cycle or tick.
 - **FR-049**: The MVP MUST NOT include online multiplayer, accounts, login, backend API, database, obstacles, resources, external food, extra players, custom board size, extra actions, cell age, or advanced AI.
+- **FR-050**: Editor Language v2 MUST extend the existing user function validation and execution system without rewriting the MVP.
+- **FR-051**: Editor Language v2 MUST keep the player-facing function shape limited to direct `health` and `nearby` arguments.
+- **FR-052**: Editor Language v2 MUST allow bounded `for` loops over approved finite sources such as `nearby`, `range(...)`, and `emptyDirections(nearby)`.
+- **FR-053**: Editor Language v2 MUST reject all `while` loops, including `while true`.
+- **FR-054**: Editor Language v2 MUST reject recursion, async code, imports, file access, network access, `eval`, `exec`, `Function`, `fetch`, `window`, `document`, `localStorage`, browser globals, and dangerous builtins.
+- **FR-055**: Editor Language v2 MUST provide only approved safe helpers: `range`, `len`, `sum`, `any`, `isEnemy`, and `emptyDirections`.
+- **FR-056**: Editor Language v2 MUST execute user code through a read-only safe context and MUST NOT expose board state, full cell lists, teams, turn objects, internal IDs, mutable cells, or engine internals.
+- **FR-057**: Editor Language v2 MUST enforce a runtime step limit in addition to the existing 1 second timeout.
+- **FR-058**: Editor Language v2 runtime errors, step-limit failures, and timeouts MUST consume only the current acting cell action and MUST NOT stop the match unless a normal end condition is reached.
+- **FR-059**: Existing MVP templates, validation behavior, gameplay rules, performance fixes, and tests MUST continue to pass after Editor Language v2 is added.
+- **FR-060**: The system MUST allow players to select a bounded turn-limit preset before Play, with default 5000 and maximum 10000.
+- **FR-061**: The selected turn limit MUST lock after Play and MUST NOT be editable until the simulation ends.
+- **FR-062**: For a selected turn limit N, turn N MUST execute completely before final victory is evaluated by turn limit.
 
 ### Key Entities
 
@@ -206,10 +230,13 @@ verifying final result details and restart behavior.
 - **SC-003**: 100% of documented action codes resolve according to the MVP rules in controlled tests.
 - **SC-004**: 100% of documented invalid action situations consume the acting cell action without corrupting board state.
 - **SC-005**: Turn ordering is deterministic across repeated runs with the same starting state and player functions.
-- **SC-006**: Turn 5000 completes before final turn-limit result evaluation in all turn-limit scenarios.
+- **SC-006**: The selected final turn completes before final turn-limit result evaluation in all turn-limit scenarios.
 - **SC-007**: The final screen correctly identifies winner or draw and termination cause for team elimination, both-team elimination, turn-limit outcomes, and manual End Simulation outcomes.
 - **SC-008**: The MVP runs without requiring login, accounts, backend services, databases, online multiplayer, or external AI services.
 - **SC-009**: Players can change simulation speed during a running match without editing locked match configuration.
+- **SC-010**: Editor Language v2 accepts bounded loops and approved helpers while rejecting all listed unsafe syntax and globals in automated tests.
+- **SC-011**: Runtime step-limit and timeout failures affect only the current acting cell and allow the match to continue.
+- **SC-012**: Turn-limit selection defaults to 5000, supports bounded presets up to 10000, locks after Play, and preserves existing 5000-turn behavior.
 
 ## Quality Requirements *(mandatory)*
 

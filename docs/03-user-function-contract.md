@@ -14,7 +14,8 @@ The function must follow these rules:
 - Only simple conditionals are allowed in the MVP.
 - Return values must be literal valid strings.
 - Dynamically generated returns are not accepted in the MVP.
-- Loops are not allowed.
+- MVP functions originally disallowed loops. Editor Language v2 allows only
+  bounded `for` loops described in the addendum below.
 - Imports are not allowed.
 - File access is not allowed.
 - Network access is not allowed.
@@ -25,16 +26,10 @@ The function must follow these rules:
 
 ## Function Input Data
 
-The function may receive only the context provided by the system:
+The function may receive only direct arguments provided by the system:
 
 - Current cell health.
-- Current cell position.
-- Total health of the current team.
-- Current turn.
-- Board size.
-- Information about the 8 neighboring squares.
-- Nearby allied cell presence.
-- Nearby enemy cell presence.
+- The 8 neighboring square states.
 
 The function must not access:
 
@@ -144,3 +139,38 @@ If the function takes more than 1 second:
 - Display the error message: `Timed out`.
 - During validation, the function is rejected.
 - During simulation, the cell loses its action.
+
+## Editor Language v2 Addendum
+
+Editor Language v2 extends the MVP editor language without exposing more engine
+state. The function still receives only direct `health` and `nearby` arguments.
+
+Additional allowed syntax:
+
+- Bounded `for` loops over approved finite sources such as `nearby`,
+  `range(...)`, and `emptyDirections(nearby)`.
+- Local variables.
+- Approved helpers: `range`, `len`, `sum`, `any`, `isEnemy`, and
+  `emptyDirections`.
+
+Still forbidden:
+
+- `while` loops, including `while true`.
+- Recursion.
+- Imports.
+- File access.
+- Network access.
+- `eval`.
+- `exec`.
+- `Function`.
+- `fetch`.
+- Browser globals such as `window`, `document`, and `localStorage`.
+- Async code.
+- Mutation of `health`, `nearby`, board, cells, team, turn, or internal state.
+
+Runtime protection:
+
+- A step limit must stop excessive execution.
+- The 1 second timeout still applies.
+- Runtime errors, step-limit failures, and timeouts consume only the current
+  cell action.

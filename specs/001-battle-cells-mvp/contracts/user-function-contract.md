@@ -85,6 +85,9 @@ objects, internal IDs, mutable cell references, or internal engine state.
 - Python syntax that can be validated and run within the MVP safety limits.
 - `if`, `elif`, and `else` conditionals.
 - Boolean comparisons against allowed argument values.
+- Bounded `for` loops in Editor Language v2.
+- Approved helper calls in Editor Language v2: `range`, `len`, `sum`, `any`,
+  `isEnemy`, and `emptyDirections`.
 - Literal string returns containing valid action codes.
 - Comments and blank lines.
 
@@ -95,14 +98,23 @@ objects, internal IDs, mutable cell references, or internal engine state.
 - Network access.
 - `eval`.
 - `exec`.
+- `Function`.
+- `fetch`.
+- `window`.
+- `document`.
+- `localStorage`.
 - Dangerous built-ins or global object access.
 - Dynamic return string construction.
 - Direct mutation of health, position, team, board, turn, or internal game
   state.
 - Access to full board state, full ally/enemy lists, team objects, turn objects,
   mutable cell references, or hidden cell IDs.
-- Infinite loops or long-running execution.
+- Unbounded loops, `while` loops, recursion, infinite loops, or long-running
+  execution.
 - Execution longer than 1 second.
+
+See [editor-language-v2-contract.md](./editor-language-v2-contract.md) for the
+planned bounded-loop, helper, step-limit, and forbidden-global details.
 
 ## Validation Outcomes
 
